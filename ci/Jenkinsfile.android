@@ -1,5 +1,16 @@
 pipeline {
-  agent { label 'linux' }
+  agent { 
+    docker {
+      label 'linux'
+      image 'statusteam/android-desktop-ubuntu:1.0.0'
+      args (
+        "-v /var/tmp/npm:/var/tmp/npm:rw "+
+        "-v /var/tmp/lain:/var/tmp/lain:rw "+
+        "-v /var/tmp/yarn:/var/tmp/yarn:rw "+
+        "-v /home/jenkins/.gradle:/home/jenkins/.gradle:ro"
+      )
+    }
+  }
 
   options {
     timestamps()
@@ -24,16 +35,19 @@ pipeline {
 
   environment {
     BUILD_PLATFORM = 'android'
-    LANG = 'en_US.UTF-8'
+    LANG     = 'en_US.UTF-8'
     LANGUAGE = 'en_US.UTF-8'
-    LC_ALL = 'en_US.UTF-8'
+    LC_ALL   = 'en_US.UTF-8'
     FASTLANE_DISABLE_COLORS = 1
     REALM_DISABLE_ANALYTICS = 1
-    BUNDLE_PATH = "${HOME}/.bundle"
-    ANDROID_HOME = '/usr/lib/android-sdk'
-    ANDROID_SDK_ROOT = '/usr/lib/android-sdk'
-    ANDROID_NDK = '/usr/lib/android-ndk'
-    ANDROID_NDK_HOME = '/usr/lib/android-ndk'
+    NPM_CONFIG_CACHE  = '/var/tmp/npm'
+    YARN_CACHE_FOLDER =' /var/tmp/yarn'
+    BUNDLE_PATH       = '/var/tmp/bundle'
+    GRADLE_USER_HOME  = '/var/tmp/gradle'
+    ANDROID_HOME      = '/usr/lib/android-sdk'
+    ANDROID_SDK_ROOT  = '/usr/lib/android-sdk'
+    ANDROID_NDK       = '/usr/lib/android-ndk'
+    ANDROID_NDK_HOME  = '/usr/lib/android-ndk'
   }
 
   stages {
