@@ -91,7 +91,6 @@
 (handlers/register-handler-fx
  :shh.callback/filter-added
  (fn [{:keys [db] :as cofx} [_ topic chat-id filter]]
-   (log/debug "PERF" :shh.callback/filter-added)
    (fx/merge cofx
              {:db (assoc-in db [:transport/filters chat-id] filter)}
              (mailserver/reset-request-to)
