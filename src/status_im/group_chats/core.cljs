@@ -465,7 +465,7 @@
      (map #(assoc % :from from) events))
    all-updates))
 
-(defn get-inviter-pk [my-public-key {:keys [membership-updates] :as chat}]
+(defn get-inviter-pk [my-public-key {:keys [membership-updates]}]
   (->> membership-updates
        unwrap-events
        (keep (fn [{:keys [from type members]}]
