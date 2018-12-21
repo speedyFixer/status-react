@@ -878,6 +878,9 @@ Example:
 (defn current-gas [{:keys [gas gas-price optimal-gas optimal-gas-price] :as transaction}]
   {:gas (or gas optimal-gas) :gas-price (or gas-price optimal-gas-price)})
 
+(defn refresh-optimal-gas [symbol tx-atom]
+  (fetch-optimal-gas symbol (fn [res] (swap! tx-atom merge res))))
+
 ;; TODO derived state
 
 ;; !!! only send gas and gas-price in a transaction if they are custom gas prices!!!
@@ -895,11 +898,9 @@ Example:
         network-fees-modal-ref (atom nil)
         open-network-fees!     #(anim-ref-send @network-fees-modal-ref :open!)
         close-network-fees!    #(anim-ref-send @network-fees-modal-ref :close!)]
-    ;; initialize the starting gas price
     (when-not (optimal-gas-present? transaction)
-      (fetch-optimal-gas
-       (some :symbol [transaction native-currency])
-       #(swap! tx-atom merge %)))
+      (refresh-optimal-gas
+       (some :symbol [transaction native-currency]) tx-atom))
     (fn [{:keys [balance network prices fiat-currency
                  native-currency all-tokens modal?]}]
       (let [symbol (some :symbol [@tx-atom native-currency])
@@ -935,7 +936,8 @@ Example:
                                                       [:navigate-to :wallet-choose-asset
                                                        {:on-asset (fn [{:keys [symbol]}]
                                                                     (when symbol
-                                                                      (swap! tx-atom assoc :symbol symbol))
+                                                                      (swap! tx-atom assoc :symbol symbol)
+                                                                      (refresh-optimal-gas symbol tx-atom))
                                                                     (re-frame/dispatch [:navigate-back]))}])
                                           :underlay-color colors/white-transparent}
                [show-current-asset token]]
@@ -1225,9 +1227,7 @@ Example:
         open-network-fees! #(anim-ref-send @network-fees-modal-ref :open!)
         close-network-fees! #(anim-ref-send @network-fees-modal-ref :close!)]
     (when-not (optimal-gas-present? transaction)
-      (fetch-optimal-gas
-       (some :symbol [transaction native-currency])
-       #(swap! tx-atom merge %)))
+      (refresh-optimal-gas (some :symbol [transaction native-currency]) tx-atom))
     (fn []
       (let [transaction @tx-atom
             gas-gas-price->fiat
