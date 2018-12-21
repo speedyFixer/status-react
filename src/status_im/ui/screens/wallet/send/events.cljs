@@ -31,14 +31,14 @@
                            password
                            on-completed))
 
-(defn- send-tokens [all-tokens symbol chain {:keys [from to value gas gasPrice]} on-completed password]
-  (let [contract (:address (tokens/symbol->token all-tokens (keyword chain) symbol))]
+(defn- send-tokens [{:keys [from to value gas gasPrice]} token on-completed password]
+  (let [contract (:address token)]
     (erc20/transfer contract from to value gas gasPrice password on-completed)))
 
-(defn send-transaction! [params all-tokens chain symbol on-completed password]
+(defn send-transaction! [params symbol coin on-completed password]
   (if (= :ETH symbol)
     (send-ethers params on-completed password)
-    (send-tokens all-tokens symbol chain params on-completed password)))
+    (send-tokens params coin on-completed password)))
 
 (handlers/register-handler-fx
  :wallet/add-unconfirmed-transaction
@@ -46,8 +46,9 @@
    {:db (assoc-in db [:wallet :transactions result]
                   (models.wallet/prepare-unconfirmed-transaction db now transaction result))}))
 
-(defn on-transaction-completed [transaction {:keys [result error]}]
-  (let [{:keys [id method public-key to symbol amount-text on-result]} transaction]
+(defn on-transaction-completed [transaction {:keys [public-key]} {:keys [decimals] :as coin} {:keys [result error]}]
+  (let [{:keys [id method to symbol amount on-result]} transaction
+        amount-text (str (money/internal->formatted amount symbol decimals))]
     (if error
       ;; ERROR
       (utils/show-popup (i18n/label :t/error) (:message error))
@@ -56,25 +57,20 @@
         (re-frame/dispatch [:wallet/add-unconfirmed-transaction transaction result])
         (if on-result
           (re-frame/dispatch (conj on-result id result method))
-          (re-frame/dispatch [:send-transaction-message public-key {:address to
-                                                                    :asset   (name symbol)
-                                                                    :amount  amount-text
-                                                                    :tx-hash result}]))))))
+          (when public-key
+            (re-frame/dispatch [:send-transaction-message public-key {:address to
+                                                                      :asset   (name symbol)
+                                                                      :amount  amount-text
+                                                                      :tx-hash result}])))))))
 
-(defn send-transaction-wrapper [transaction password all-tokens chain account]
-  (send-transaction! (models.wallet/prepare-send-transaction (:address account) transaction)
-                     all-tokens
-                     chain
-                     (:symbol transaction)
-                     #(on-transaction-completed transaction (types/json->clj %))
-                     password))
-
-(re-frame/reg-fx
- ::send-transaction
- (fn [[params all-tokens symbol chain on-completed masked-password]]
-   (case symbol
-     :ETH (send-ethers params on-completed masked-password)
-     (send-tokens all-tokens symbol chain params on-completed masked-password))))
+(defn send-transaction-wrapper [transaction password all-tokens chain contact account]
+  (let [symbol (:symbol transaction)
+        coin   (tokens/asset-for all-tokens (keyword chain) symbol)]
+    (send-transaction! (models.wallet/prepare-send-transaction (:address account) transaction)
+                       symbol
+                       coin
+                       #(on-transaction-completed transaction contact coin (types/json->clj %))
+                       password)))
 
 (re-frame/reg-fx
  ::sign-message

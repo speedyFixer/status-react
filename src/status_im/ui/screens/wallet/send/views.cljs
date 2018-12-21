@@ -1017,23 +1017,18 @@ Example:
                                        :padding-left 11}}
                    (name symbol)]]]
                 (let [disabled? (string/blank? input-amount)]
-                  [address-button {:disabled? disabled?
-                                   :underlay-color colors/black-transparent
+                  [address-button {:disabled?        disabled?
+                                   :underlay-color   colors/black-transparent
                                    :background-color (if disabled? colors/blue colors/white)
-                                   :token token
-                                   :on-press
-                                   #(re-frame/dispatch [:navigate-to
-                                                        :wallet-txn-overview
-                                                        {:modal? modal?
-                                                         :contact contact
-                                                         :transaction
-                                                         (assoc
-                                                          @tx-atom
-                                                          :amount
-                                                          (money/formatted->internal
-                                                           (money/bignumber input-amount)
-                                                           (:symbol token)
-                                                           (:decimals token)))}])}
+                                   :token            token
+                                   :on-press         #(re-frame/dispatch [:navigate-to :wallet-txn-overview
+                                                                          {:modal?      modal?
+                                                                           :contact     contact
+                                                                           :transaction (assoc @tx-atom
+                                                                                               :amount (money/formatted->internal
+                                                                                                        (money/bignumber input-amount)
+                                                                                                        (:symbol token)
+                                                                                                        (:decimals token)))}])}
                    [react/text {:style {:color (if disabled? colors/white colors/blue)
                                         :font-size 15
                                         :line-height 22}}
@@ -1046,15 +1041,15 @@ Example:
             network [:account/network]
             all-tokens [:wallet/all-tokens]
             fiat-currency [:wallet/currency]]
-    [choose-amount-token-helper {:balance balance
-                                 :network network
-                                 :all-tokens all-tokens
-                                 :modal? modal?
-                                 :prices prices
+    [choose-amount-token-helper {:balance         balance
+                                 :network         network
+                                 :all-tokens      all-tokens
+                                 :modal?          modal?
+                                 :prices          prices
                                  :native-currency native-currency
-                                 :fiat-currency fiat-currency
-                                 :contact contact
-                                 :transaction transaction}]))
+                                 :fiat-currency   fiat-currency
+                                 :contact         contact
+                                 :transaction     transaction}]))
 
 ;; ----------------------------------------------------------------------
 ;; Step 3 Final Overview
@@ -1132,7 +1127,8 @@ Example:
                        :width 1
                        :background-color colors/gray-light}}])
 
-(defview sign-modal [account {:keys [transaction total-amount gas-amount native-currency fiat-currency total-fiat all-tokens chain]}]
+(defview sign-modal [account {:keys [transaction contact total-amount gas-amount native-currency fiat-currency
+                                     total-fiat all-tokens chain]}]
   (letsubs [password (reagent/atom nil)]
     (let [phrase (string/split (:signing-phrase account) #" ")]
       [react/view {:style {:position :absolute
@@ -1203,7 +1199,7 @@ Example:
                              :padding-top     16
                              :padding-bottom  24}}
          [react/touchable-highlight
-          {:on-press #(events/send-transaction-wrapper transaction @password all-tokens chain account)
+          {:on-press #(events/send-transaction-wrapper transaction @password all-tokens chain contact account)
            :style    {:padding-horizontal 39
                       :padding-vertical   12
                       :border-radius      8
@@ -1353,6 +1349,7 @@ Example:
                                   :text-align :right}}
               (str "~ "  network-fee-fiat " " (:code fiat-currency))]]]]
           [confirm-and-sign {:transaction     transaction
+                             :contact         contact
                              :total-amount    total-amount
                              :gas-amount      gas-amount
                              :native-currency native-currency
