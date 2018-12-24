@@ -295,7 +295,7 @@
 
 ;; TODO clean up all dependencies here, leaving these in place until all behavior is verified on
 ;; all platforms
-(defn- choose-address-contact [{:keys [modal? contacts scroll advanced? transaction network all-tokens amount-input network-status] :as opts}]
+(defn- choose-address-contact [{:keys [modal? contacts scroll transaction network all-tokens network-status] :as opts}]
 
   (let [transaction                  (reagent/atom transaction)
         chain                        (ethereum/network->chain-keyword network)
@@ -857,8 +857,9 @@ Example:
     (update-input-errors token fiat-currency prices)))
 
 (defn max-fee [{:keys [gas gas-price]}]
-  {:pre [gas gas-price]}
-  (money/wei->ether (.times gas gas-price)))
+  (if (and gas gas-price)
+    (money/wei->ether (.times gas gas-price))
+    0))
 
 (defn network-fees [prices token fiat-currency gas-ether-price]
   (some-> (token->fiat-conversion prices token fiat-currency gas-ether-price)
@@ -1383,34 +1384,20 @@ Example:
                              :chain           chain}])))
 
 ;; MAIN SEND TRANSACTION VIEW
-(defn- send-transaction-view [{:keys [scroll] :as opts}]
-  (let [amount-input (atom nil)
-        handler      (fn [_]
-                       (when (and scroll @scroll @amount-input
-                                  (.isFocused @amount-input))
-                         (log/debug "Amount field focused, scrolling down")
-                         (.scrollToEnd @scroll)))]
-    (reagent/create-class
-     {:component-will-mount (fn [_]
-                              ;;NOTE(goranjovic): keyboardDidShow is for android and keyboardWillShow for ios
-                              (.addListener react/keyboard "keyboardDidShow" handler)
-                              (.addListener react/keyboard "keyboardWillShow" handler))
-      :reagent-render       (fn [opts] [choose-address-contact (assoc opts :amount-input amount-input)])})))
+(defn- send-transaction-view [opts]
+  (reagent/create-class
+   {:reagent-render (fn [opts] [choose-address-contact opts])}))
 
 ;; SEND TRANSACTION FROM WALLET (CHAT)
 (defview send-transaction []
   (letsubs [transaction    [:wallet.send/transaction]
-            advanced?      [:wallet.send/advanced?]
             network        [:account/network]
-            scroll         (atom nil)
             network-status [:network-status]
             all-tokens     [:wallet/all-tokens]
             contacts       [:contacts/all-added-people-contacts]]
     [send-transaction-view {:modal?         false
                             ;; TODO only send gas and gas-price when they are custom
                             :transaction    (dissoc transaction :gas :gas-price)
-                            :scroll         scroll
-                            :advanced?      advanced?
                             :network        network
                             :all-tokens     all-tokens
                             :contacts       contacts
@@ -1419,16 +1406,12 @@ Example:
 ;; SEND TRANSACTION FROM DAPP
 (defview send-transaction-modal []
   (letsubs [transaction    [:wallet.send/transaction]
-            advanced?      [:wallet.send/advanced?]
             network        [:account/network]
-            scroll         (atom nil)
             network-status [:network-status]
             all-tokens     [:wallet/all-tokens]]
     (if transaction
       [send-transaction-view {:modal?         true
                               :transaction    transaction
-                              :scroll         scroll
-                              :advanced?      advanced?
                               :network        network
                               :all-tokens     all-tokens
                               :network-status network-status}]
