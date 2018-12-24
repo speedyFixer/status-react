@@ -297,12 +297,13 @@
           next-view-id              (if (:wallet-set-up-passed? sender-account)
                                       :wallet-txn-overview
                                       :wallet-onboarding-setup)]
-      (let [transaction (merge {:amount (money/formatted->internal value symbol decimals)
-                                :symbol symbol
-                                :to     (:address recipient-contact)})]
+      (let [transaction {:amount (money/formatted->internal value symbol decimals)
+                         :symbol symbol
+                         :to     (:address recipient-contact)
+                         :flow   :chat}]
         (navigation/navigate-to-cofx cofx next-view-id {:transaction transaction
-                                                        :contact recipient-contact
-                                                        :modal? false}))))
+                                                        :contact     recipient-contact
+                                                        :flow        :chat}))))
   protocol/EnhancedParameters
   (enhance-send-parameters [_ parameters cofx]
     (-> parameters

@@ -39,11 +39,11 @@
             [status-im.ui.components.colors :as colors]
             [status-im.ui.screens.wallet.utils :as wallet.utils]))
 
-(defn- toolbar [modal? title]
-  (let [action (if modal? actions/close-white actions/back-white)]
+(defn- toolbar [flow title chat-id]
+  (let [action (if (= :chat flow) actions/close-white actions/back-white)]
     [toolbar/toolbar {:style wallet.styles/toolbar}
-     [toolbar/nav-button (action (if modal?
-                                   #(re-frame/dispatch [:wallet/discard-transaction-navigate-back])
+     [toolbar/nav-button (action (if (= :chat flow)
+                                   #(re-frame/dispatch [:chat.ui/navigate-to-chat chat-id {}])
                                    #(actions/default-handler)))]
      [toolbar/content-title {:color :white :font-weight :bold :font-size 17} title]]))
 
@@ -304,7 +304,7 @@
         online? (= :online network-status)]
     [wallet.components/simple-screen {:avoid-keyboard? (not modal?)
                                       :status-bar-type (if modal? :modal-wallet :wallet)}
-     [toolbar modal? (i18n/label :t/send-to)]
+     [toolbar :wallet (i18n/label :t/send-to) nil]
      [simple-tab-navigator
       {:address
        {:name "Address"
@@ -911,7 +911,7 @@ Example:
               (network-fees prices token fiat-currency (max-fee gas-map)))]
         [wallet.components/simple-screen {:avoid-keyboard? (not modal?)
                                           :status-bar-type (if modal? :modal-wallet :wallet)}
-         [toolbar modal? "Send amount"]
+         [toolbar :wallet "Send amount" nil]
          (if (empty? balance)
            (info-page "You don't have any assets yet")
            (let [{:keys [error-message input-amount] :as state} @state-atom
@@ -1128,7 +1128,7 @@ Example:
                        :background-color colors/gray-light}}])
 
 (defview sign-modal [account {:keys [transaction contact total-amount gas-amount native-currency fiat-currency
-                                     total-fiat all-tokens chain]}]
+                                     total-fiat all-tokens chain flow]}]
   (letsubs [password (reagent/atom nil)]
     (let [phrase (string/split (:signing-phrase account) #" ")]
       [react/view {:style {:position :absolute
@@ -1199,7 +1199,7 @@ Example:
                              :padding-top     16
                              :padding-bottom  24}}
          [react/touchable-highlight
-          {:on-press #(events/send-transaction-wrapper transaction @password all-tokens chain contact account)
+          {:on-press #(events/send-transaction-wrapper transaction @password flow all-tokens chain contact account)
            :style    {:padding-horizontal 39
                       :padding-vertical   12
                       :border-radius      8
@@ -1216,12 +1216,13 @@ Example:
       [confirm-modal signing? params]
       [sign-modal account params])))
 
-(defn transaction-overview [{:keys [modal? transaction contact token native-currency
+(defn transaction-overview [{:keys [flow transaction contact token native-currency
                                     fiat-currency prices all-tokens chain] :as data}]
   (let [tx-atom (reagent/atom transaction)
         network-fees-modal-ref (atom nil)
         open-network-fees! #(anim-ref-send @network-fees-modal-ref :open!)
-        close-network-fees! #(anim-ref-send @network-fees-modal-ref :close!)]
+        close-network-fees! #(anim-ref-send @network-fees-modal-ref :close!)
+        modal? (= :dapp flow)]
     (when-not (optimal-gas-present? transaction)
       (refresh-optimal-gas (some :symbol [transaction native-currency]) tx-atom))
     (fn []
@@ -1257,7 +1258,7 @@ Example:
                                (money/with-precision 2))]
         [wallet.components/simple-screen {:avoid-keyboard? (not modal?)
                                           :status-bar-type (if modal? :modal-wallet :wallet)}
-         [toolbar modal? "Send amount"]
+         [toolbar flow "Send amount" (:public-key contact)]
          [react/view {:style {:flex 1
                               :border-top-width 1
                               :border-top-color colors/white-light-transparent}}
@@ -1352,10 +1353,11 @@ Example:
                              :fiat-currency   fiat-currency
                              :total-fiat      total-fiat
                              :all-tokens      all-tokens
-                             :chain           chain}]]]))))
+                             :chain           chain
+                             :flow            flow}]]]))))
 
 (defview txn-overview []
-  (letsubs [{:keys [transaction modal? contact]} [:get-screen-params :wallet-txn-overview]
+  (letsubs [{:keys [transaction flow contact]} [:get-screen-params :wallet-txn-overview]
             balance                              [:balance]
             prices                               [:prices]
             network                              [:account/network]
@@ -1366,7 +1368,7 @@ Example:
           token           (tokens/asset-for all-tokens
                                             (ethereum/network->chain-keyword network) (:symbol transaction))]
       [transaction-overview {:transaction     transaction
-                             :modal?          modal?
+                             :flow            flow
                              :contact         contact
                              :prices          prices
                              :network         network
@@ -1403,7 +1405,7 @@ Example:
             network-status [:network-status]
             all-tokens     [:wallet/all-tokens]]
     (if transaction
-      [send-transaction-view {:modal?         true
+      [send-transaction-view {:flow           :dapp
                               :transaction    transaction
                               :network        network
                               :all-tokens     all-tokens
@@ -1411,6 +1413,6 @@ Example:
       [react/view wallet.styles/wallet-modal-container
        [react/view components.styles/flex
         [status-bar/status-bar {:type :modal-wallet}]
-        [toolbar true (i18n/label :t/send-transaction)]
+        [toolbar :dapp (i18n/label :t/send-transaction) nil]
         [react/i18n-text {:style styles/empty-text
                           :key   :unsigned-transaction-expired}]]])))

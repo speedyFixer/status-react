@@ -46,7 +46,8 @@
    {:db (assoc-in db [:wallet :transactions result]
                   (models.wallet/prepare-unconfirmed-transaction db now transaction result))}))
 
-(defn on-transaction-completed [transaction {:keys [public-key]} {:keys [decimals] :as coin} {:keys [result error]}]
+;;TODO(goranjovic) - fully refactor
+(defn on-transaction-completed [transaction flow {:keys [public-key]} {:keys [decimals] :as coin} {:keys [result error]}]
   (let [{:keys [id method to symbol amount on-result]} transaction
         amount-text (str (money/internal->formatted amount symbol decimals))]
     (if error
@@ -58,18 +59,18 @@
         (if on-result
           (re-frame/dispatch (conj on-result id result method))
           (when public-key
-            (re-frame/dispatch [:send-transaction-message public-key {:address to
-                                                                      :asset   (name symbol)
-                                                                      :amount  amount-text
-                                                                      :tx-hash result}])))))))
+            (re-frame/dispatch [:send-transaction-message public-key flow {:address to
+                                                                           :asset   (name symbol)
+                                                                           :amount  amount-text
+                                                                           :tx-hash result}])))))))
 
-(defn send-transaction-wrapper [transaction password all-tokens chain contact account]
+(defn send-transaction-wrapper [transaction password flow all-tokens chain contact account]
   (let [symbol (:symbol transaction)
         coin   (tokens/asset-for all-tokens (keyword chain) symbol)]
     (send-transaction! (models.wallet/prepare-send-transaction (:address account) transaction)
                        symbol
                        coin
-                       #(on-transaction-completed transaction contact coin (types/json->clj %))
+                       #(on-transaction-completed transaction flow contact coin (types/json->clj %))
                        password)))
 
 (re-frame/reg-fx
@@ -186,10 +187,10 @@
 
         (if on-result
           {:dispatch (conj on-result id result method)}
-          {:dispatch [:send-transaction-message public-key {:address to
-                                                            :asset   (name symbol)
-                                                            :amount  amount-text
-                                                            :tx-hash result}]}))))))
+          {:dispatch [:send-transaction-message public-key :dapp {:address to
+                                                                  :asset   (name symbol)
+                                                                  :amount  amount-text
+                                                                  :tx-hash result}]}))))))
 
 ;; DISCARD TRANSACTION
 (handlers/register-handler-fx
@@ -244,14 +245,15 @@
  :send-transaction-message
  (concat [(re-frame/inject-cofx :random-id-generator)]
          navigation/navigation-interceptors)
- (fn [{:keys [db] :as cofx} [_ chat-id params]]
+ (fn [{:keys [db] :as cofx} [_ chat-id flow params]]
    ;;NOTE(goranjovic): we want to send the payment message only when we have a whisper id
    ;; for the recipient, we always redirect to `:wallet-transaction-sent` even when we don't
    (let [send-command? (and chat-id (get-in db [:id->command ["send" #{:personal-chats}]]))]
      (fx/merge cofx
                #(when send-command?
                   (commands-sending/send % chat-id send-command? params))
-               (navigation/navigate-to-clean :wallet-transaction-sent {})))))
+               (navigation/navigate-to-clean :wallet-transaction-sent {:flow    flow
+                                                                       :chat-id chat-id})))))
 
 (defn set-and-validate-amount-db [db amount symbol decimals]
   (let [{:keys [value error]} (wallet.db/parse-amount amount decimals)]
@@ -352,8 +354,10 @@
 
 (handlers/register-handler-fx
  :close-transaction-sent-screen
- (fn [cofx [_ chat-id]]
+ (fn [cofx [_ chat-id flow]]
    (fx/merge cofx
              {:dispatch-later [{:ms 400 :dispatch [:check-dapps-transactions-queue]}]}
-             (navigation/navigate-back))))
+             #(if (= :chat flow)
+                (re-frame/dispatch [:chat.ui/navigate-to-chat chat-id {}])
+                (re-frame/dispatch [:navigate-to :wallet {}])))))
 
