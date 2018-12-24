@@ -75,6 +75,8 @@
                    "react-native-desktop-menu"
                    "react-native-desktop-config"
                    "react-native-desktop-notification"
+                   "react-native-link-preview"
+                   "react-native-scalable-image"
                    "text-encoding"
                    "js-sha3"
                    "web3-utils"]
