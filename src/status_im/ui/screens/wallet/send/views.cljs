@@ -880,11 +880,10 @@ Example:
   {:gas (or gas optimal-gas) :gas-price (or gas-price optimal-gas-price)})
 
 (defn refresh-optimal-gas [symbol tx-atom]
-  (fetch-optimal-gas symbol (fn [res] (swap! tx-atom merge res))))
+  (fetch-optimal-gas symbol
+                     (fn [res]
+                       (swap! tx-atom merge res))))
 
-;; TODO derived state
-
-;; !!! only send gas and gas-price in a transaction if they are custom gas prices!!!
 (defn choose-amount-token-helper [{:keys [balance network prices fiat-currency
                                           native-currency
                                           all-tokens
@@ -1219,7 +1218,7 @@ Example:
 
 (defn transaction-overview [{:keys [modal? transaction contact token native-currency
                                     fiat-currency prices all-tokens chain] :as data}]
-  (let [tx-atom (atom transaction)
+  (let [tx-atom (reagent/atom transaction)
         network-fees-modal-ref (atom nil)
         open-network-fees! #(anim-ref-send @network-fees-modal-ref :open!)
         close-network-fees! #(anim-ref-send @network-fees-modal-ref :close!)]
@@ -1255,11 +1254,7 @@ Example:
                                (money/with-precision 18))
 
             total-fiat (some-> (token->fiat-conversion prices token fiat-currency total-amount)
-                               (money/with-precision 2))
-
-            #_fee-fiat-amount
-            #_(some-> (token->fiat-conversion prices token fiat-currency formated-amount)
-                      (money/with-precision 2))]
+                               (money/with-precision 2))]
         [wallet.components/simple-screen {:avoid-keyboard? (not modal?)
                                           :status-bar-type (if modal? :modal-wallet :wallet)}
          [toolbar modal? "Send amount"]
@@ -1357,9 +1352,7 @@ Example:
                              :fiat-currency   fiat-currency
                              :total-fiat      total-fiat
                              :all-tokens      all-tokens
-                             :chain           chain}]
-
-          #_[react/text "Here we are"]]]))))
+                             :chain           chain}]]]))))
 
 (defview txn-overview []
   (letsubs [{:keys [transaction modal? contact]} [:get-screen-params :wallet-txn-overview]
