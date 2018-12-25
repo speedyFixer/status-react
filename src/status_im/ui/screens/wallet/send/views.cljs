@@ -47,33 +47,6 @@
                                    #(actions/default-handler)))]
      [toolbar/content-title {:color :white :font-weight :bold :font-size 17} title]]))
 
-(defn- advanced-cartouche [native-currency {:keys [max-fee gas gas-price]}]
-  [react/view
-   [wallet.components/cartouche {:on-press  #(do (re-frame/dispatch [:wallet.send/clear-gas])
-                                                 (re-frame/dispatch [:navigate-to :wallet-transaction-fee]))}
-    (i18n/label :t/wallet-transaction-fee)
-    [react/view {:style               styles/advanced-options-text-wrapper
-                 :accessibility-label :transaction-fee-button}
-     [react/text {:style styles/advanced-fees-text}
-      (str max-fee " " (wallet.utils/display-symbol native-currency))]
-     [react/text {:style styles/advanced-fees-details-text}
-      (str (money/to-fixed gas) " * " (money/to-fixed (money/wei-> :gwei gas-price)) (i18n/label :t/gwei))]]]])
-
-(defn- advanced-options [advanced? native-currency transaction scroll]
-  [react/view {:style styles/advanced-wrapper}
-   [react/touchable-highlight {:on-press (fn []
-                                           (re-frame/dispatch [:wallet.send/toggle-advanced (not advanced?)])
-                                           (when (and scroll @scroll) (utils/set-timeout #(.scrollToEnd @scroll) 350)))}
-    [react/view {:style styles/advanced-button-wrapper}
-     [react/view {:style               styles/advanced-button
-                  :accessibility-label :advanced-button}
-      [react/i18n-text {:style (merge wallet.components.styles/label
-                                      styles/advanced-label)
-                        :key   :wallet-advanced}]
-      [vector-icons/icon (if advanced? :icons/up :icons/down) {:color :white}]]]]
-   (when advanced?
-     [advanced-cartouche native-currency transaction])])
-
 ;; ----------------------------------------------------------------------
 ;; Step 1 choosing an address or contact to send the transaction to
 ;; ----------------------------------------------------------------------

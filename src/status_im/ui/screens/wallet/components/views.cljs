@@ -111,9 +111,8 @@
      (name symbol)]]])
 
 (defn- type->handler [k]
-  (case k
-    :send    :wallet.send/set-symbol
-    :request :wallet.request/set-symbol
+  (if (= k :request)
+    :wallet.request/set-symbol
     (throw (str "Unknown type: " k))))
 
 (defn- render-token [{:keys [symbol name icon decimals amount] :as token} type]

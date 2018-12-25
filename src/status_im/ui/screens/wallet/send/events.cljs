@@ -192,12 +192,6 @@
                                                                   :amount  amount-text
                                                                   :tx-hash result}]}))))))
 
-;; DISCARD TRANSACTION
-(handlers/register-handler-fx
- :wallet/discard-transaction
- (fn [cofx _]
-   (models.wallet/discard-transaction cofx)))
-
 (handlers/register-handler-fx
  :wallet.dapp/transaction-on-result
  (fn [{db :db} [_ message-id id result method]]
@@ -254,59 +248,12 @@
                   (commands-sending/send % chat-id send-command? params))
                (navigation/navigate-to-clean :wallet-transaction-sent {:flow    flow
                                                                        :chat-id chat-id})))))
-
-(defn set-and-validate-amount-db [db amount symbol decimals]
-  (let [{:keys [value error]} (wallet.db/parse-amount amount decimals)]
-    (-> db
-        (assoc-in [:wallet :send-transaction :amount] (money/formatted->internal value symbol decimals))
-        (assoc-in [:wallet :send-transaction :amount-text] amount)
-        (assoc-in [:wallet :send-transaction :amount-error] error))))
-
-(handlers/register-handler-fx
- :wallet.send/set-and-validate-amount
- (fn [{:keys [db]} [_ amount symbol decimals]]
-   {:db (set-and-validate-amount-db db amount symbol decimals)}))
-
 (handlers/register-handler-fx
  :wallet/discard-transaction-navigate-back
  (fn [cofx _]
    (fx/merge cofx
              (navigation/navigate-back)
              (models.wallet/discard-transaction))))
-
-(defn update-gas-price
-  ([db edit? success-event]
-   {:update-gas-price {:web3          (:web3 db)
-                       :success-event (or success-event :wallet/update-gas-price-success)
-                       :edit?         edit?}})
-  ([db edit?] (update-gas-price db edit? :wallet/update-gas-price-success))
-  ([db] (update-gas-price db false :wallet/update-gas-price-success)))
-
-(defn recalculate-gas [{:keys [db] :as fx} symbol]
-  (-> fx
-      (assoc-in [:db :wallet :send-transaction :gas] (ethereum/estimate-gas symbol))
-      (merge (update-gas-price db))))
-
-(handlers/register-handler-fx
- :wallet/update-gas-price
- (fn [{:keys [db]} [_ edit?]]
-   (update-gas-price db edit?)))
-
-(handlers/register-handler-fx
- :wallet.send/set-symbol
- (fn [{:keys [db]} [_ symbol]]
-   (let [old-symbol (get-in db [:wallet :send-transaction :symbol])]
-     (cond-> {:db (-> db
-                      (assoc-in [:wallet :send-transaction :symbol] symbol)
-                      (assoc-in [:wallet :send-transaction :amount] nil)
-                      (assoc-in [:wallet :send-transaction :amount-text] nil)
-                      (assoc-in [:wallet :send-transaction :asset-error] nil))}
-       (not= old-symbol symbol) (recalculate-gas symbol)))))
-
-(handlers/register-handler-fx
- :wallet.send/toggle-advanced
- (fn [{:keys [db]} [_ advanced?]]
-   {:db (assoc-in db [:wallet :send-transaction :advanced?] advanced?)}))
 
 (handlers/register-handler-fx
  :wallet/cancel-entering-password
@@ -320,37 +267,6 @@
  :wallet.send/set-password
  (fn [{:keys [db]} [_ masked-password]]
    {:db (assoc-in db [:wallet :send-transaction :password] masked-password)}))
-
-(handlers/register-handler-fx
- :wallet.send/edit-value
- (fn [cofx [_ key value]]
-   (models.wallet/edit-value key value cofx)))
-
-(handlers/register-handler-fx
- :wallet.send/set-gas-details
- (fn [{:keys [db]} [_ gas gas-price]]
-   {:db (-> db
-            (assoc-in [:wallet :send-transaction :gas] gas)
-            (assoc-in [:wallet :send-transaction :gas-price] gas-price))}))
-
-(handlers/register-handler-fx
- :wallet.send/clear-gas
- (fn [{:keys [db]}]
-   {:db (update db :wallet dissoc :edit)}))
-
-(handlers/register-handler-fx
- :wallet.send/reset-gas-default
- (fn [{:keys [db] :as cofx}]
-   (let [gas-default (if-some [original-gas (-> db :wallet :send-transaction :original-gas)]
-                       (money/to-fixed original-gas)
-                       (money/to-fixed
-                        (ethereum/estimate-gas
-                         (-> db :wallet :send-transaction :symbol))))]
-     (assoc (models.wallet/edit-value
-             :gas
-             gas-default
-             cofx)
-            :dispatch [:wallet/update-gas-price true]))))
 
 (handlers/register-handler-fx
  :close-transaction-sent-screen
