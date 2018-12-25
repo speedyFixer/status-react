@@ -99,13 +99,14 @@
 ;; Choose Address View
 ;; ----------------------------------------------------------------------
 
-(def centered {:justify-content :center
-               :align-items :center})
+(def centered
+  {:justify-content :center
+   :align-items :center})
 
 (defstyle choose-recipient-text-input
   {:color             colors/white
    :font-size         30
    :font-weight       :bold
-   :android {:width "100%"}
-   :ios     {:min-width 236}
+   :android           {:width "60%"}
+   :ios               {:min-width 236}
    :margin-horizontal 24})
