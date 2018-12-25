@@ -675,14 +675,14 @@ Example:
                                    #(actions/default-handler)))]
      [toolbar/content-title {:color colors/black :font-size 17 :font-weight :bold} title]]))
 
-(defn- render-token-item [{:keys [symbol name icon decimals amount] :as token}]
+(defn- render-token-item [{:keys [symbol name icon decimals amount] :as coin}]
   [list/item
    [list/item-image icon]
    [list/item-content
     [react/text {:style {:margin-right 10, :color colors/black}} name]
     [list/item-secondary (str (wallet.utils/format-amount amount decimals)
                               " "
-                              (wallet.utils/display-symbol token))]]])
+                              (wallet.utils/display-symbol coin))]]])
 
 ;; TODO parameterize this with on-asset handler
 (defview choose-asset []
@@ -752,13 +752,13 @@ Example:
 (defn toggle-edit-gas [state]
   (swap! state update :edit-gas not))
 
-(defn input-currency-symbol [{:keys [inverted] :as state} {:keys [symbol] :as token} {:keys [code] :as fiat-currency}]
+(defn input-currency-symbol [{:keys [inverted] :as state} {:keys [symbol] :as coin} {:keys [code] :as fiat-currency}]
   {:pre [(boolean? inverted) (keyword? symbol) (string? code)]}
-  (if-not (:inverted state) (name (:symbol token)) code))
+  (if-not (:inverted state) (wallet.utils/display-symbol coin) code))
 
-(defn converted-currency-symbol [{:keys [inverted] :as state} {:keys [symbol] :as token} {:keys [code] :as fiat-currency}]
+(defn converted-currency-symbol [{:keys [inverted] :as state} {:keys [symbol] :as coin} {:keys [code] :as fiat-currency}]
   {:pre [(boolean? inverted) (keyword? symbol) (string? code)]}
-  (if (:inverted state) (name (:symbol token)) code))
+  (if (:inverted state) (wallet.utils/display-symbol coin) code))
 
 (defn token->fiat-conversion [prices token fiat-currency value]
   {:pre [(map? prices) (map? token) (map? fiat-currency) value]}
@@ -865,9 +865,9 @@ Example:
                                           transaction]}]
   {:pre [(map? native-currency)]}
   (let [tx-atom                (reagent/atom transaction)
-        token                  (or (fetch-token all-tokens network (:symbol transaction))
+        coin                   (or (fetch-token all-tokens network (:symbol transaction))
                                    native-currency)
-        state-atom             (reagent/atom (create-initial-state token (:amount transaction)))
+        state-atom             (reagent/atom (create-initial-state coin (:amount transaction)))
         network-fees-modal-ref (atom nil)
         open-network-fees!     #(anim-ref-send @network-fees-modal-ref :open!)
         close-network-fees!    #(anim-ref-send @network-fees-modal-ref :close!)]
@@ -877,19 +877,19 @@ Example:
     (fn [{:keys [balance network prices fiat-currency
                  native-currency all-tokens modal?]}]
       (let [symbol (some :symbol [@tx-atom native-currency])
-            token  (-> (tokens/asset-for all-tokens (ethereum/network->chain-keyword network) symbol)
-                       (assoc :amount (get balance symbol (money/bignumber 0))))
+            coin  (-> (tokens/asset-for all-tokens (ethereum/network->chain-keyword network) symbol)
+                      (assoc :amount (get balance symbol (money/bignumber 0))))
             gas-gas-price->fiat
             (fn [gas-map]
-              (network-fees prices token fiat-currency (max-fee gas-map)))]
+              (network-fees prices coin fiat-currency (max-fee gas-map)))]
         [wallet.components/simple-screen {:avoid-keyboard? (not modal?)
                                           :status-bar-type (if modal? :modal-wallet :wallet)}
          [toolbar :wallet "Send amount" nil]
          (if (empty? balance)
            (info-page "You don't have any assets yet")
            (let [{:keys [error-message input-amount] :as state} @state-atom
-                 input-symbol     (input-currency-symbol state token fiat-currency)
-                 converted-phrase (converted-currency-phrase state token fiat-currency prices)]
+                 input-symbol     (input-currency-symbol state coin fiat-currency)
+                 converted-phrase (converted-currency-phrase state coin fiat-currency prices)]
              [react/view {:flex 1}
               ;; network fees modal
               (when (optimal-gas-present? @tx-atom)
@@ -913,7 +913,7 @@ Example:
                                                                       (refresh-optimal-gas symbol tx-atom))
                                                                     (re-frame/dispatch [:navigate-back]))}])
                                           :underlay-color colors/white-transparent}
-               [show-current-asset token]]
+               [show-current-asset coin]]
               [react/view {:flex 1}
                [react/view {:flex 1}]
                [react/view {:justify-content :center
@@ -924,7 +924,7 @@ Example:
                                                   :font-size    12
                                                   :bottom-value 15}])
                 [react/text-input
-                 {:on-change-text         #(swap! state-atom update-input-amount % token fiat-currency prices)
+                 {:on-change-text         #(swap! state-atom update-input-amount % coin fiat-currency prices)
                   :keyboard-type          :numeric
                   :accessibility-label    :amount-input
                   :auto-focus             true
@@ -988,20 +988,20 @@ Example:
                                        :font-size 15
                                        :line-height 22
                                        :padding-left 11}}
-                   (name symbol)]]]
+                   (wallet.utils/display-symbol coin)]]]
                 (let [disabled? (string/blank? input-amount)]
                   [address-button {:disabled?        disabled?
                                    :underlay-color   colors/black-transparent
                                    :background-color (if disabled? colors/blue colors/white)
-                                   :token            token
+                                   :token            coin
                                    :on-press         #(re-frame/dispatch [:navigate-to :wallet-txn-overview
                                                                           {:modal?      modal?
                                                                            :contact     contact
                                                                            :transaction (assoc @tx-atom
                                                                                                :amount (money/formatted->internal
                                                                                                         (money/bignumber input-amount)
-                                                                                                        (:symbol token)
-                                                                                                        (:decimals token)))}])}
+                                                                                                        (:symbol coin)
+                                                                                                        (:decimals coin)))}])}
                    [react/text {:style {:color (if disabled? colors/white colors/blue)
                                         :font-size 15
                                         :line-height 22}}
@@ -1200,11 +1200,11 @@ Example:
 
 (defn transaction-overview [{:keys [flow transaction contact token native-currency
                                     fiat-currency prices all-tokens chain] :as data}]
-  (let [tx-atom (reagent/atom transaction)
+  (let [tx-atom                (reagent/atom transaction)
         network-fees-modal-ref (atom nil)
-        open-network-fees! #(anim-ref-send @network-fees-modal-ref :open!)
-        close-network-fees! #(anim-ref-send @network-fees-modal-ref :close!)
-        modal? (= :dapp flow)]
+        open-network-fees!     #(anim-ref-send @network-fees-modal-ref :open!)
+        close-network-fees!    #(anim-ref-send @network-fees-modal-ref :close!)
+        modal?                 (= :dapp flow)]
     (when-not (optimal-gas-present? transaction)
       (refresh-optimal-gas (some :symbol [transaction native-currency]) tx-atom))
     (fn []
@@ -1223,7 +1223,7 @@ Example:
                                        (:symbol token)
                                        (:decimals token))
             amount-str (str formatted-amount
-                            " " (name (:symbol token)))
+                            " " (wallet.utils/display-symbol token))
 
             fiat-amount (some-> (token->fiat-conversion prices token fiat-currency formatted-amount)
                                 (money/with-precision 2))
@@ -1321,7 +1321,7 @@ Example:
                                   :font-size 15
                                   :font-weight "500"
                                   :text-align :right}}
-              (str network-fee-eth " " (name (:symbol native-currency)))]
+              (str network-fee-eth " " (wallet.utils/display-symbol native-currency))]
              [react/text {:style {:color colors/white-transparent
                                   :line-height 21
                                   :font-size 15
