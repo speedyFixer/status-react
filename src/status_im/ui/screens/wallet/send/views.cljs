@@ -1102,7 +1102,8 @@ Example:
 
 (defview sign-modal [account {:keys [transaction contact total-amount gas-amount native-currency fiat-currency
                                      total-fiat all-tokens chain flow]}]
-  (letsubs [password (reagent/atom nil)]
+  (letsubs [password     (reagent/atom nil)
+            in-progress? (reagent/atom nil)]
     (let [phrase (string/split (:signing-phrase account) #" ")]
       [react/view {:style {:position :absolute
                            :left     0
@@ -1172,7 +1173,9 @@ Example:
                              :padding-top     16
                              :padding-bottom  24}}
          [react/touchable-highlight
-          {:on-press #(events/send-transaction-wrapper transaction @password flow all-tokens chain contact account)
+          {:on-press #(do (reset! in-progress? true)
+                          (events/send-transaction-wrapper transaction @password flow all-tokens chain contact account))
+           :disabled @in-progress?
            :style    {:padding-horizontal 39
                       :padding-vertical   12
                       :border-radius      8
