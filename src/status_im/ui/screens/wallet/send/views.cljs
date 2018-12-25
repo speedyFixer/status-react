@@ -1358,11 +1358,11 @@ Example:
 
 (defview txn-overview []
   (letsubs [{:keys [transaction flow contact]} [:get-screen-params :wallet-txn-overview]
-            balance                              [:balance]
-            prices                               [:prices]
-            network                              [:account/network]
-            all-tokens                           [:wallet/all-tokens]
-            fiat-currency                        [:wallet/currency]]
+            balance                            [:balance]
+            prices                             [:prices]
+            network                            [:account/network]
+            all-tokens                         [:wallet/all-tokens]
+            fiat-currency                      [:wallet/currency]]
     (let [chain           (ethereum/network->chain-keyword network)
           native-currency (tokens/native-currency chain)
           token           (tokens/asset-for all-tokens
@@ -1400,19 +1400,23 @@ Example:
 
 ;; SEND TRANSACTION FROM DAPP
 (defview send-transaction-modal []
-  (letsubs [transaction    [:wallet.send/transaction]
-            network        [:account/network]
-            network-status [:network-status]
-            all-tokens     [:wallet/all-tokens]]
-    (if transaction
-      [send-transaction-view {:flow           :dapp
-                              :transaction    transaction
-                              :network        network
-                              :all-tokens     all-tokens
-                              :network-status network-status}]
-      [react/view wallet.styles/wallet-modal-container
-       [react/view components.styles/flex
-        [status-bar/status-bar {:type :modal-wallet}]
-        [toolbar :dapp (i18n/label :t/send-transaction) nil]
-        [react/i18n-text {:style styles/empty-text
-                          :key   :unsigned-transaction-expired}]]])))
+  (letsubs [{:keys [transaction flow contact]} [:get-screen-params :wallet-send-transaction-modal]
+            balance                            [:balance]
+            prices                             [:prices]
+            network                            [:account/network]
+            all-tokens                         [:wallet/all-tokens]
+            fiat-currency                      [:wallet/currency]]
+    (let [chain           (ethereum/network->chain-keyword network)
+          native-currency (tokens/native-currency chain)
+          token           (tokens/asset-for all-tokens
+                                            (ethereum/network->chain-keyword network) (:symbol transaction))]
+      [transaction-overview {:transaction     transaction
+                             :flow            flow
+                             :contact         contact
+                             :prices          prices
+                             :network         network
+                             :token           token
+                             :native-currency native-currency
+                             :fiat-currency   fiat-currency
+                             :all-tokens      all-tokens
+                             :chain           chain}])))

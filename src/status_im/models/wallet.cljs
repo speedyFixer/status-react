@@ -243,11 +243,9 @@
                      (assoc-in [:wallet :send-transaction] transaction)
                      (assoc-in [:wallet :send-transaction :original-gas] gas))
      :dispatch-n [[:update-wallet]
-                  (when-not gas
-                    [:wallet/update-estimated-gas tx-object])
-                  (when-not gas-price
-                    [:wallet/update-gas-price])
                   [:navigate-to
                    (if wallet-set-up-passed?
-                     :wallet-send-modal-stack
-                     :wallet-send-modal-stack-with-onboarding)]]}))
+                     :wallet-send-transaction-modal
+                     :wallet-send-modal-stack-with-onboarding)
+                   {:transaction transaction
+                    :flow        :dapp}]]}))
