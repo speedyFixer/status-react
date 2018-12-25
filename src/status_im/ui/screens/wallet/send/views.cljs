@@ -1173,8 +1173,14 @@ Example:
                              :padding-top     16
                              :padding-bottom  24}}
          [react/touchable-highlight
-          {:on-press #(do (reset! in-progress? true)
-                          (events/send-transaction-wrapper transaction @password flow all-tokens chain contact account))
+          {:on-press #(events/send-transaction-wrapper {:transaction  transaction
+                                                        :password     @password
+                                                        :flow         flow
+                                                        :all-tokens   all-tokens
+                                                        :in-progress? in-progress?
+                                                        :chain        chain
+                                                        :contact      contact
+                                                        :account      account})
            :disabled @in-progress?
            :style    {:padding-horizontal 39
                       :padding-vertical   12

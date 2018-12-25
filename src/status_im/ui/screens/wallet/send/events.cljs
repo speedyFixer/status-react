@@ -47,12 +47,16 @@
                   (models.wallet/prepare-unconfirmed-transaction db now transaction result))}))
 
 ;;TODO(goranjovic) - fully refactor
-(defn on-transaction-completed [transaction flow {:keys [public-key]} {:keys [decimals] :as coin} {:keys [result error]}]
+(defn on-transaction-completed [transaction flow {:keys [public-key]} {:keys [decimals] :as coin} {:keys [result error]} in-progress?]
   (let [{:keys [id method to symbol amount on-result]} transaction
         amount-text (str (money/internal->formatted amount symbol decimals))]
     (if error
       ;; ERROR
-      (utils/show-popup (i18n/label :t/error) (:message error))
+      (do (utils/show-popup (i18n/label :t/error)
+                            (if (= (:code error) 5)
+                              (i18n/label :t/wrong-password)
+                              (:message error)))
+          (reset! in-progress? false))
       ;; RESULT
       (do
         (re-frame/dispatch [:wallet/add-unconfirmed-transaction transaction result])
@@ -64,13 +68,14 @@
                                                                            :amount  amount-text
                                                                            :tx-hash result}])))))))
 
-(defn send-transaction-wrapper [transaction password flow all-tokens chain contact account]
+(defn send-transaction-wrapper [{:keys [transaction password flow all-tokens in-progress? chain contact account]}]
   (let [symbol (:symbol transaction)
         coin   (tokens/asset-for all-tokens (keyword chain) symbol)]
+    (reset! in-progress? true)
     (send-transaction! (models.wallet/prepare-send-transaction (:address account) transaction)
                        symbol
                        coin
-                       #(on-transaction-completed transaction flow contact coin (types/json->clj %))
+                       #(on-transaction-completed transaction flow contact coin (types/json->clj %) in-progress?)
                        password)))
 
 (re-frame/reg-fx
