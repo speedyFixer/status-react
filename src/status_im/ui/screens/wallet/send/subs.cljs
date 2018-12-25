@@ -12,24 +12,6 @@
    (:send-transaction wallet)))
 
 (re-frame/reg-sub
- :wallet.send/symbol
- :<- [::send-transaction]
- (fn [send-transaction]
-   (:symbol send-transaction)))
-
-(re-frame/reg-sub
- :wallet.send/advanced?
- :<- [::send-transaction]
- (fn [send-transaction]
-   (:advanced? send-transaction)))
-
-(re-frame/reg-sub
- :wallet.send/camera-flashlight
- :<- [::send-transaction]
- (fn [send-transaction]
-   (:camera-flashlight send-transaction)))
-
-(re-frame/reg-sub
  :wallet.send/wrong-password?
  :<- [::send-transaction]
  (fn [send-transaction]
@@ -40,29 +22,6 @@
  :<- [::send-transaction]
  (fn [{:keys [password]}]
    (and (not (nil? password)) (not= password ""))))
-
-(defn edit-or-transaction-data
-  "Set up edit data structure, defaulting to transaction when not available"
-  [transaction edit]
-  (cond-> edit
-    (not (get-in edit [:gas-price :value]))
-    (models.wallet/build-edit
-     :gas-price
-     (money/to-fixed (money/wei-> :gwei (:gas-price transaction))))
-
-    (not (get-in edit [:gas :value]))
-    (models.wallet/build-edit
-     :gas
-     (money/to-fixed (:gas transaction)))))
-
-(re-frame/reg-sub
- :wallet/edit
- :<- [::send-transaction]
- :<- [:wallet]
- (fn [[send-transaction {:keys [edit]}]]
-   (edit-or-transaction-data
-    send-transaction
-    edit)))
 
 (defn- check-sufficient-funds [{:keys [amount symbol] :as transaction} balance]
   (assoc transaction :sufficient-funds?
