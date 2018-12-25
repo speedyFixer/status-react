@@ -225,7 +225,7 @@
          ;;SEND TRANSACTION
          (= method constants/web3-send-transaction)
          (let [transaction (models.wallet/prepare-dapp-transaction queued-transaction (:contacts/contacts db))]
-           (models.wallet/open-modal-wallet-for-transaction db' transaction (first params)))
+           (models.wallet/open-modal-wallet-for-transaction db' transaction))
 
          ;;SIGN MESSAGE
          (= method constants/web3-personal-sign)

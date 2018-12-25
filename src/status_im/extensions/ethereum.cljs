@@ -75,7 +75,7 @@
   (let [tx-object (assoc (select-keys arguments [:to :gas :gas-price :value :nonce])
                          :data (when (and method params) (abi-spec/encode method params)))
         transaction (prepare-extension-transaction tx-object (:contacts/contacts db) on-result)]
-    (models.wallet/open-modal-wallet-for-transaction db transaction tx-object)))
+    (models.wallet/open-modal-wallet-for-transaction db transaction)))
 
 (handlers/register-handler-fx
  :extensions/ethereum-send-transaction

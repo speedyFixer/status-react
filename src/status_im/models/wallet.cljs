@@ -236,16 +236,13 @@
                                (assoc-in [:wallet :balance-loading?] true)
                                (assoc :prices-loading? true))})))
 
-(defn open-modal-wallet-for-transaction [db transaction tx-object]
-  (let [{:keys [gas gas-price]} transaction
+(defn open-modal-wallet-for-transaction [db transaction]
+  (let [{:keys [gas]} transaction
         {:keys [wallet-set-up-passed?]} (:account/account db)]
-    {:db         (-> db
-                     (assoc-in [:wallet :send-transaction] transaction)
-                     (assoc-in [:wallet :send-transaction :original-gas] gas))
-     :dispatch-n [[:update-wallet]
+    {:dispatch-n [[:update-wallet]
                   [:navigate-to
                    (if wallet-set-up-passed?
                      :wallet-send-transaction-modal
                      :wallet-send-modal-stack-with-onboarding)
-                   {:transaction transaction
+                   {:transaction (assoc transaction :original-gas gas)
                     :flow        :dapp}]]}))
