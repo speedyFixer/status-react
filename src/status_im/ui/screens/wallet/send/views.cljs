@@ -40,7 +40,7 @@
             [status-im.ui.screens.wallet.utils :as wallet.utils]))
 
 (defn- toolbar [flow title chat-id]
-  (let [action (if (= :chat flow) actions/close-white actions/back-white)]
+  (let [action (if (#{:chat :dapp} flow) actions/close-white actions/back-white)]
     [toolbar/toolbar {:style wallet.styles/toolbar}
      [toolbar/nav-button (action (if (= :chat flow)
                                    #(re-frame/dispatch [:chat.ui/navigate-to-chat chat-id {}])
