@@ -239,7 +239,8 @@
 (defn open-modal-wallet-for-transaction [db transaction]
   (let [{:keys [gas]} transaction
         {:keys [wallet-set-up-passed?]} (:account/account db)]
-    {:dispatch-n [[:update-wallet]
+    {:db         db
+     :dispatch-n [[:update-wallet]
                   [:navigate-to
                    (if wallet-set-up-passed?
                      :wallet-send-transaction-modal

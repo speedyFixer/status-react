@@ -273,7 +273,8 @@
  (fn [cofx [_ chat-id flow]]
    (fx/merge cofx
              {:dispatch-later [{:ms 400 :dispatch [:check-dapps-transactions-queue]}]}
-             #(if (= :chat flow)
-                (re-frame/dispatch [:chat.ui/navigate-to-chat chat-id {}])
+             #(case flow
+                :chat (re-frame/dispatch [:chat.ui/navigate-to-chat chat-id {}])
+                :dapp (re-frame/dispatch [:navigate-back])
                 (re-frame/dispatch [:navigate-to :wallet {}])))))
 
