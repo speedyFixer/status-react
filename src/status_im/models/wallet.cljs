@@ -244,6 +244,6 @@
                   [:navigate-to
                    (if wallet-set-up-passed?
                      :wallet-send-transaction-modal
-                     :wallet-send-modal-stack-with-onboarding)
+                     :wallet-onboarding-setup-modal)
                    {:transaction (assoc transaction :original-gas gas)
                     :flow        :dapp}]]}))

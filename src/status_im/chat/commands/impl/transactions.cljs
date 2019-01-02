@@ -299,8 +299,7 @@
                                       :wallet-onboarding-setup)]
       (let [transaction {:amount (money/formatted->internal value symbol decimals)
                          :symbol symbol
-                         :to     (:address recipient-contact)
-                         :flow   :chat}]
+                         :to     (:address recipient-contact)}]
         (navigation/navigate-to-cofx cofx next-view-id {:transaction transaction
                                                         :contact     recipient-contact
                                                         :flow        :chat}))))
