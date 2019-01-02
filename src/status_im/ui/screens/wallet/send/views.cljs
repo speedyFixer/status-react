@@ -331,6 +331,18 @@ Example:
                  (pr-str (keys anim-ref)))))
   (some-> anim-ref (get signal) (apply args)))
 
+(defn static-modal [children]
+  (let [modal-screen-bg-color (colors/alpha colors/black 0.7)]
+    [react/view {:style
+                 {:position         :absolute
+                  :top              0
+                  :bottom           0
+                  :left             0
+                  :right            0
+                  :z-index          1
+                  :background-color modal-screen-bg-color}}
+     children]))
+
 (defn- slide-up-modal
   "Creates a modal that slides up from the bottom of the screen and
   responds to a swipe down gesture to dismiss 
@@ -343,7 +355,7 @@ Example:
   Options:
     :anim-ref - takes a function that will be called with a map of
         animation methods.
-    :swipe-dismiss? - a boolean that determines wether the modal screen
+    :swipe-dismiss? - a boolean that determines whether the modal screen
         should be dismissed on swipe down gesture
 
   This slide-up-modal will callback the `anim-ref` fn and provides a
@@ -353,7 +365,6 @@ Example:
   :close! - closes the modal"
   [{:keys [anim-ref swipe-dismiss?]} children]
   {:pre [(fn? anim-ref)]}
-  ;; Add swipe down to dissmiss
   (let [window-height (:height (react/get-dimensions "window") 1000)
 
         bottom-position  (animation/create-value (- window-height))
@@ -361,8 +372,8 @@ Example:
         modal-screen-bg-color
         (animation/interpolate bottom-position
                                {:inputRange [(- window-height) 0]
-                                :outputRange ["rgba(0,0,0,0)"
-                                              "rgba(0,0,0,0.7)"]})
+                                :outputRange [colors/black
+                                              (colors/alpha colors/black 0.7)]})
         modal-screen-top
         (animation/interpolate bottom-position
                                {:inputRange [(- window-height)
@@ -1111,8 +1122,8 @@ Example:
                            :bottom   0}}
        [tooltip/tooltip "Only send the transaction if you recognize\nyour three words"
         {:bottom-value 12
-         :color        colors/blue-light
-         :text-color   colors/blue}]
+         :color        colors/blue
+         :text-color   colors/white}]
        [react/view {:style {:background-color        colors/white
                             :border-top-left-radius  8
                             :border-top-right-radius 8}}
@@ -1328,16 +1339,17 @@ Example:
                                   :font-size 15
                                   :text-align :right}}
               (str "~ "  network-fee-fiat " " (:code fiat-currency))]]]]
-          [confirm-and-sign {:transaction     transaction
-                             :contact         contact
-                             :total-amount    total-amount
-                             :gas-amount      gas-amount
-                             :native-currency native-currency
-                             :fiat-currency   fiat-currency
-                             :total-fiat      total-fiat
-                             :all-tokens      all-tokens
-                             :chain           chain
-                             :flow            flow}]]]))))
+          [static-modal
+           [confirm-and-sign {:transaction     transaction
+                              :contact         contact
+                              :total-amount    total-amount
+                              :gas-amount      gas-amount
+                              :native-currency native-currency
+                              :fiat-currency   fiat-currency
+                              :total-fiat      total-fiat
+                              :all-tokens      all-tokens
+                              :chain           chain
+                              :flow            flow}]]]]))))
 
 (defview txn-overview []
   (letsubs [{:keys [transaction flow contact]} [:get-screen-params :wallet-txn-overview]
