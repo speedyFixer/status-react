@@ -1111,7 +1111,8 @@ Example:
                            :bottom   0}}
        [tooltip/tooltip "Only send the transaction if you recognize\nyour three words"
         {:bottom-value 12
-         :color        colors/red-light}]
+         :color        colors/blue-light
+         :text-color   colors/blue}]
        [react/view {:style {:background-color        colors/white
                             :border-top-left-radius  8
                             :border-top-right-radius 8}}
@@ -1194,7 +1195,7 @@ Example:
 (defview confirm-and-sign [params]
   (letsubs [signing? (reagent/atom false)
             account  [:account/account]]
-    (if @signing?
+    (if-not @signing?
       [confirm-modal signing? params]
       [sign-modal account params])))
 

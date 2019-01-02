@@ -107,6 +107,6 @@
   {:color             colors/white
    :font-size         30
    :font-weight       :bold
-   :android           {:width "60%"}
+   :android           {:width "75%"}
    :ios               {:min-width 236}
    :margin-horizontal 24})
