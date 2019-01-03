@@ -34,6 +34,7 @@
 
 ;; LIGHT BLUE
 (def blue-light "#ECEFFC") ;; Light Blue
+(def blue-shadow "#8FA2EA")
 (def gray-background blue-light) ;; TODO (andrey) should be refactored later by Dmitry
 
 ;; RED

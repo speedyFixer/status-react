@@ -76,7 +76,6 @@
          (when-let [component-thunk (some-> tab-map tab-name :component)]
            [component-thunk])]))))
 
-;; just a helper for the buttons in choose address view
 (defn- address-button [{:keys [disabled? on-press underlay-color background-color]} content]
   [react/touchable-highlight {:underlay-color underlay-color
                               :disabled       disabled?
@@ -89,8 +88,6 @@
                                                :justify-content  :center
                                                :margin           3}}
    content])
-
-;; event code
 
 (defn open-qr-scanner [chain text-input transaction]
   (.blur @text-input)
@@ -144,7 +141,7 @@
             :auto-capitalize        :none
             :auto-correct           false
             :placeholder            "0x... or name.eth"
-            :placeholder-text-color "rgb(143,162,234)"
+            :placeholder-text-color colors/blue-shadow
             :multiline              true
             :max-length             84
             :ref                    #(reset! text-input %)
@@ -207,8 +204,6 @@
                                   :line-height 22}}
               (i18n/label :t/next)]])]]))))
 
-;;  #(re-frame/dispatch [:wallet/fill-request-from-contact contact])
-
 (defn info-page [message]
   [react/view {:style {:flex             1
                        :align-items      :center
@@ -260,15 +255,11 @@
                                   render-contact
                                   on-contact)}]]))
 
-;; TODO clean up all dependencies here, leaving these in place until all behavior is verified on
-;; all platforms
-(defn- choose-address-contact [{:keys [modal? contacts transaction network all-tokens network-status] :as opts}]
-
-  (let [transaction                  (reagent/atom transaction)
-        chain                        (ethereum/network->chain-keyword network)
-        native-currency              (tokens/native-currency chain)
-        {:keys [decimals] :as token} (tokens/asset-for all-tokens chain symbol)
-        online? (= :online network-status)]
+(defn- choose-address-contact [{:keys [modal? contacts transaction network network-status]}]
+  (let [transaction     (reagent/atom transaction)
+        chain           (ethereum/network->chain-keyword network)
+        native-currency (tokens/native-currency chain)
+        online?         (= :online network-status)]
     [wallet.components/simple-screen {:avoid-keyboard? (not modal?)
                                       :status-bar-type (if modal? :modal-wallet :wallet)}
      [toolbar :wallet (i18n/label :t/send-to) nil]
@@ -302,21 +293,16 @@
 ;; worthy abstraction
 (defn- anim-ref-send
   "Call one of the methods in an animation ref.
+   Takes an animation ref (a map of keys to animation tiggering methods)
+   a keyword that should equal one of the keys in the map  and optional args to be sent to the animation.
 
-Takes an animation ref (a map of keys to animation tiggering methods)
-
-A keyword that should equal one of the keys in the map
-
-and optional args to be sent to the animation.
-
-Example:
-(anim-ref-send slider-ref :open!)
-(anim-ref-send slider-ref :move-top-left! 25 25)"
+   Example:
+    (anim-ref-send slider-ref :open!)
+    (anim-ref-send slider-ref :move-top-left! 25 25)"
   [anim-ref signal & args]
   (when anim-ref
     (assert (get anim-ref signal)
-            (str "Key " signal
-                 " was not found in animation ref. Should be in "
+            (str "Key " signal " was not found in animation ref. Should be in "
                  (pr-str (keys anim-ref)))))
   (some-> anim-ref (get signal) (apply args)))
 
@@ -682,7 +668,6 @@ Example:
                               " "
                               (wallet.utils/display-symbol coin))]]])
 
-;; TODO parameterize this with on-asset handler
 (defview choose-asset []
   (letsubs [assets [:wallet/transferrable-assets-with-amount]
             {:keys [on-asset]} [:get-screen-params :wallet-choose-asset]]
@@ -746,14 +731,11 @@ Example:
    :edit-gas      false
    :error-message nil})
 
-(defn toggle-edit-gas [state]
-  (swap! state update :edit-gas not))
-
-(defn input-currency-symbol [{:keys [inverted] :as state} {:keys [symbol] :as coin} {:keys [code] :as fiat-currency}]
+(defn input-currency-symbol [{:keys [inverted] :as state} {:keys [symbol] :as coin} {:keys [code]}]
   {:pre [(boolean? inverted) (keyword? symbol) (string? code)]}
   (if-not (:inverted state) (wallet.utils/display-symbol coin) code))
 
-(defn converted-currency-symbol [{:keys [inverted] :as state} {:keys [symbol] :as coin} {:keys [code] :as fiat-currency}]
+(defn converted-currency-symbol [{:keys [inverted] :as state} {:keys [symbol] :as coin} {:keys [code]}]
   {:pre [(boolean? inverted) (keyword? symbol) (string? code)]}
   (if (:inverted state) (wallet.utils/display-symbol coin) code))
 
@@ -777,7 +759,6 @@ Example:
 
 (defn valid-input-amount? [input-amount]
   (and (not (string/blank? input-amount))
-       ;; we are ignoring precision for this case
        (not (:error (wallet.db/parse-amount input-amount 100)))))
 
 (defn converted-currency-amount [{:keys [input-amount inverted]} token fiat-currency prices]
@@ -805,7 +786,7 @@ Example:
 
 (defn update-input-errors [{:keys [input-amount inverted] :as state} token fiat-currency prices]
   {:pre [(map? state) (map? token) (map? fiat-currency) (map? prices)]}
-  (let [{:keys [value error]}
+  (let [{:keys [_value error]}
         (wallet.db/parse-amount input-amount
                                 (if inverted 2 (:decimals token)))]
     (if-let [error-msg
@@ -843,10 +824,10 @@ Example:
        (cb {:optimal-gas (ethereum/estimate-gas symbol)
             :optimal-gas-price gas-price})))))
 
-(defn optimal-gas-present? [{:keys [optimal-gas optimal-gas-price] :as transaction}]
+(defn optimal-gas-present? [{:keys [optimal-gas optimal-gas-price]}]
   (and optimal-gas optimal-gas-price))
 
-(defn current-gas [{:keys [gas gas-price optimal-gas optimal-gas-price] :as transaction}]
+(defn current-gas [{:keys [gas gas-price optimal-gas optimal-gas-price]}]
   {:gas (or gas optimal-gas) :gas-price (or gas-price optimal-gas-price)})
 
 (defn refresh-optimal-gas [symbol tx-atom]
@@ -854,7 +835,7 @@ Example:
                      (fn [res]
                        (swap! tx-atom merge res))))
 
-(defn choose-amount-token-helper [{:keys [balance network
+(defn choose-amount-token-helper [{:keys [network
                                           native-currency
                                           all-tokens
                                           contact
@@ -927,7 +908,7 @@ Example:
                   :auto-capitalize        :none
                   :auto-correct           false
                   :placeholder            "0"
-                  :placeholder-text-color "rgb(143,162,234)"
+                  :placeholder-text-color colors/blue-shadow
                   :multiline              true
                   :max-length             20
                   :default-value          input-amount
@@ -939,7 +920,7 @@ Example:
                                            :max-width          290}}]
                 [react/text {:style {:color       (if (not (string/blank? input-amount))
                                                     colors/white
-                                                    "rgb(143,162,234)")
+                                                    colors/blue-shadow)
                                      :font-size   30
                                      :font-weight :bold}}
                  input-symbol]]
@@ -948,7 +929,7 @@ Example:
                                      :margin-top  16
                                      :font-size   15
                                      :line-height 22
-                                     :color "rgb(143,162,234)"}}
+                                     :color       colors/blue-shadow}}
                  converted-phrase]]
                [react/view {:justify-content :center
                             :flex-direction  :row}
@@ -1027,9 +1008,8 @@ Example:
 ;; ----------------------------------------------------------------------
 
 ;; TODOS
-;; wire in final send transation
 ;; look at duplicate logic and create a model so that we can simply execute methods against that model
-;; instead of peicing together various information for each individual computation
+;; instead of piecing together various information for each individual computation
 
 (def signing-popup
   {:background-color        colors/white
@@ -1340,7 +1320,6 @@ Example:
 
 (defview txn-overview []
   (letsubs [{:keys [transaction flow contact]} [:get-screen-params :wallet-txn-overview]
-            balance                            [:balance]
             prices                             [:prices]
             network                            [:account/network]
             all-tokens                         [:wallet/all-tokens]
@@ -1373,7 +1352,6 @@ Example:
             all-tokens     [:wallet/all-tokens]
             contacts       [:contacts/all-added-people-contacts]]
     [send-transaction-view {:modal?         false
-                            ;; TODO only send gas and gas-price when they are custom
                             :transaction    (dissoc transaction :gas :gas-price)
                             :network        network
                             :all-tokens     all-tokens
@@ -1383,7 +1361,6 @@ Example:
 ;; SEND TRANSACTION FROM DAPP
 (defview send-transaction-modal []
   (letsubs [{:keys [transaction flow contact]} [:get-screen-params :wallet-send-transaction-modal]
-            balance                            [:balance]
             prices                             [:prices]
             network                            [:account/network]
             all-tokens                         [:wallet/all-tokens]
