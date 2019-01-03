@@ -944,7 +944,7 @@
                                       :font-size   15
                                       :line-height 22}}
                   (i18n/label :t/network-fee-amount {:amount   (when (optimal-gas-present? @tx-atom)
-                                                                 (gas-gas-price->fiat (current-gas @tx-atom)))
+                                                                 (or (gas-gas-price->fiat (current-gas @tx-atom)) "0"))
                                                      :currency (:code fiat-currency)})]]]
                [react/view {:flex 1}]
 
@@ -1039,8 +1039,7 @@
                           :font-size   22
                           :line-height 28
                           :text-align  :center}}
-      (i18n/label :t/send-amount-currency {:amount   gas-amount
-                                           :currency (name (:symbol native-currency))})])
+      (str "Send" " " gas-amount " " (name (:symbol native-currency)))])
    [react/text {:style {:color       colors/gray
                         :text-align  :center
                         :margin-top  3
@@ -1112,8 +1111,7 @@
                              :font-size   22
                              :line-height 28
                              :text-align  :center}}
-         (i18n/label :t/send-amount-currency {:amount   total-amount
-                                              :currency (name (:symbol transaction))})]
+         (str "Send" " " total-amount " " (name (:symbol transaction)))]
         (when-not (= :ETH (:symbol transaction))
           [react/text {:style {:color       colors/black
                                :margin-top  13
@@ -1121,8 +1119,7 @@
                                :font-size   22
                                :line-height 28
                                :text-align  :center}}
-           (i18n/label :t/send-amount-currency {:amount   gas-amount
-                                                :currency (name (:symbol native-currency))})])
+           (str "Send" " " gas-amount " " (name (:symbol native-currency)))])
         [react/text {:style {:color       colors/gray
                              :text-align  :center
                              :margin-top  3
@@ -1257,7 +1254,7 @@
                                :font-size  15
                                :text-align :center
                                :color      colors/white-transparent}}
-           (i81n/label :t/amount)]
+           (i18n/label :t/amount)]
           [react/view {:style {:flex-direction    :row
                                :align-items       :center
                                :margin-top        10
