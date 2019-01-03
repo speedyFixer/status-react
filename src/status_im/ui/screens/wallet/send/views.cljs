@@ -2,12 +2,8 @@
   (:require-macros [status-im.utils.views :refer [defview letsubs]])
   (:require [clojure.string :as string]
             [re-frame.core :as re-frame]
-            [status-im.contact.db :as contact.db]
             [status-im.i18n :as i18n]
             [status-im.ui.components.animation :as animation]
-            [status-im.ui.components.bottom-buttons.view :as bottom-buttons]
-            [status-im.ui.components.button.view :as button]
-            [status-im.ui.components.common.common :as common]
             [status-im.ui.components.icons.vector-icons :as vector-icons]
             [status-im.ui.components.react :as react]
             [status-im.ui.components.status-bar.view :as status-bar]
@@ -18,21 +14,15 @@
             [status-im.ui.components.list.views :as list]
             [status-im.ui.components.list.styles :as list.styles]
             [status-im.ui.screens.chat.photos :as photos]
-            [status-im.ui.screens.wallet.components.styles :as wallet.components.styles]
-            [status-im.ui.screens.wallet.components.views :as components]
             [status-im.ui.screens.wallet.components.views :as wallet.components]
             [status-im.ui.screens.wallet.db :as wallet.db]
-            [status-im.ui.screens.wallet.send.animations :as send.animations]
             [status-im.ui.screens.wallet.send.styles :as styles]
             [status-im.ui.screens.wallet.send.events :as events]
             [status-im.ui.screens.wallet.styles :as wallet.styles]
-            [status-im.ui.screens.wallet.main.views :as wallet.main.views]
             [status-im.utils.money :as money]
-            [status-im.utils.security :as security]
             [status-im.utils.utils :as utils]
             [status-im.utils.ethereum.tokens :as tokens]
             [status-im.utils.ethereum.core :as ethereum]
-            [status-im.transport.utils :as transport.utils]
             [status-im.utils.ethereum.ens :as ens]
             [taoensso.timbre :as log]
             [reagent.core :as reagent]
@@ -79,8 +69,8 @@
                                   :align-items         :center
                                   :justify-content     :center
                                   :border-bottom-width 2
-                                  :border-bottom-color (if current? colors/white "rgba(0,0,0,0)")}
-                      [react/text {:style {:color (if current? :white "rgba(255,255,255,0.4)")
+                                  :border-bottom-color (if current? colors/white colors/transparent)}
+                      [react/text {:style {:color     (if current? colors/white colors/white-transparent)
                                            :font-size 15}} name]]]]))
                tab-map)]
          (when-let [component-thunk (some-> tab-map tab-name :component)]
@@ -89,15 +79,15 @@
 ;; just a helper for the buttons in choose address view
 (defn- address-button [{:keys [disabled? on-press underlay-color background-color]} content]
   [react/touchable-highlight {:underlay-color underlay-color
-                              :disabled disabled?
-                              :on-press on-press
-                              :style {:height 44
-                                      :background-color background-color
-                                      :border-radius 8
-                                      :flex 1
-                                      :align-items :center
-                                      :justify-content :center
-                                      :margin 3}}
+                              :disabled       disabled?
+                              :on-press       on-press
+                              :style          {:height           44
+                                               :background-color background-color
+                                               :border-radius    8
+                                               :flex             1
+                                               :align-items      :center
+                                               :justify-content  :center
+                                               :margin           3}}
    content])
 
 ;; event code
@@ -109,7 +99,7 @@
                        (fn [qr-data]
                          (if-let [parsed-qr-data (events/extract-qr-code-details chain qr-data)]
                            (let [{:keys [chain-id]} parsed-qr-data
-                                 tx-data (events/qr-data->transaction-data parsed-qr-data)]
+                                 tx-data            (events/qr-data->transaction-data parsed-qr-data)]
                              (if (= chain-id (ethereum/chain-keyword->chain-id chain))
                                (swap! transaction merge tx-data)
                                (utils/show-popup (i18n/label :t/error)
@@ -149,34 +139,36 @@
                                              :font-size    12
                                              :bottom-value 15}])
           [react/text-input
-           {:on-change-text (partial update-recipient chain transaction error-message)
-            :auto-focus true
-            :auto-capitalize :none
-            :auto-correct false
-            :placeholder "0x... or name.eth"
+           {:on-change-text         (partial update-recipient chain transaction error-message)
+            :auto-focus             true
+            :auto-capitalize        :none
+            :auto-correct           false
+            :placeholder            "0x... or name.eth"
             :placeholder-text-color "rgb(143,162,234)"
-            :multiline true
-            :max-length 84
-            :ref #(reset! text-input %)
-            ;;NOTE(goranjovic)- :default-value instead of :value to prevent the flickering due to two way binding
-            :default-value (or (:to-ens @transaction) (:to @transaction))
-            :selection-color colors/green
-            :accessibility-label :recipient-address-input
-            :style styles/choose-recipient-text-input}]]
+            :multiline              true
+            :max-length             84
+            :ref                    #(reset! text-input %)
+            :default-value          (or (:to-ens @transaction) (:to @transaction))
+            :selection-color        colors/green
+            :accessibility-label    :recipient-address-input
+            :style                  styles/choose-recipient-text-input}]]
          [react/view {:flex 1}]
-         [react/view {:flex-direction :row :padding 3}
-          [address-button {:underlay-color colors/white-transparent
+         [react/view {:flex-direction :row
+                      :padding        3}
+          [address-button {:underlay-color   colors/white-transparent
                            :background-color colors/black-transparent
-                           :on-press #(react/get-from-clipboard
-                                       (fn [addr]
-                                         (when (and addr (not (string/blank? addr)))
-                                           (swap! transaction assoc :to (string/trim addr)))))}
-           [react/view {:flex-direction :row
+                           :on-press         #(react/get-from-clipboard
+                                               (fn [addr]
+                                                 (when (and addr (not (string/blank? addr)))
+                                                   (swap! transaction assoc :to (string/trim addr)))))}
+           [react/view {:flex-direction     :row
                         :padding-horizontal 18}
             [vector-icons/icon :icons/paste {:color colors/white-transparent}]
-            [react/view {:flex 1 :flex-direction :row :justify-content :center}
-             [react/text {:style {:color colors/white
-                                  :font-size 15
+            [react/view {:flex            1
+                         :flex-direction  :row
+                         :justify-content :center}
+             [react/text {:style {:color       colors/white
+                                  :font-size   15
                                   :line-height 22}}
               (i18n/label :t/paste)]]]]
           [address-button {:underlay-color colors/white-transparent
@@ -192,66 +184,68 @@
                                                          (utils/show-popup (i18n/label :t/error)
                                                                            (i18n/label :t/camera-access-error)))
                                                        50)}]))}
-           [react/view {:flex-direction :row
+           [react/view {:flex-direction     :row
                         :padding-horizontal 18}
             [vector-icons/icon :icons/qr {:color colors/white-transparent}]
-            [react/view {:flex 1 :flex-direction :row :justify-content :center}
-             [react/text {:style {:color colors/white
-                                  :font-size 15
+            [react/view {:flex            1
+                         :flex-direction  :row
+                         :justify-content :center}
+             [react/text {:style {:color       colors/white
+                                  :font-size   15
                                   :line-height 22}}
               (i18n/label :t/scan)]]]]
           (let [disabled? (string/blank? (:to @transaction))]
-            [address-button {:disabled? disabled?
-                             :underlay-color colors/black-transparent
+            [address-button {:disabled?        disabled?
+                             :underlay-color   colors/black-transparent
                              :background-color (if disabled? colors/blue colors/white)
                              :on-press
                              #(events/chosen-recipient chain (:to @transaction) on-address
                                                        (fn on-error [_]
                                                          (reset! error-message (i18n/label :t/invalid-address))))}
-             [react/text {:style {:color (if disabled? colors/white colors/blue)
-                                  :font-size 15
+             [react/text {:style {:color       (if disabled? colors/white colors/blue)
+                                  :font-size   15
                                   :line-height 22}}
               (i18n/label :t/next)]])]]))))
 
 ;;  #(re-frame/dispatch [:wallet/fill-request-from-contact contact])
 
 (defn info-page [message]
-  [react/view {:style {:flex 1
-                       :align-items :center
-                       :justify-content :center
+  [react/view {:style {:flex             1
+                       :align-items      :center
+                       :justify-content  :center
                        :background-color colors/blue}}
    [vector-icons/icon :icons/info {:color colors/white}]
-   [react/text {:style {:max-width 144
-                        :margin-top 15
-                        :color colors/white
-                        :font-size 15
-                        :text-align :center
+   [react/text {:style {:max-width   144
+                        :margin-top  15
+                        :color       colors/white
+                        :font-size   15
+                        :text-align  :center
                         :line-height 22}}
     message]])
 
 (defn render-contact [on-contact contact]
   {:pre [(fn? on-contact) (map? contact) (:address contact)]}
   [react/touchable-highlight {:underlay-color colors/white-transparent
-                              :on-press #(on-contact contact)}
-   [react/view {:flex 1
+                              :on-press       #(on-contact contact)}
+   [react/view {:flex           1
                 :flex-direction :row
-                :padding-right 23
-                :padding-left 16
-                :padding-top 12}
+                :padding-right  23
+                :padding-left   16
+                :padding-top    12}
     [react/view {:margin-top 3}
      [photos/photo (:photo-path contact) {:size list.styles/image-size}]]
     [react/view {:margin-left 16
-                 :flex 1}
+                 :flex        1}
      [react/view {:accessibility-label :contact-name-text
-                  :margin-bottom 2}
-      [react/text {:style {:font-size 15
+                  :margin-bottom       2}
+      [react/text {:style {:font-size   15
                            :font-weight "500"
                            :line-height 22
-                           :color colors/white}}
+                           :color       colors/white}}
        (:name contact)]]
-     [react/text {:style {:font-size 15
-                          :line-height 22
-                          :color "rgba(255,255,255,0.4)"}
+     [react/text {:style               {:font-size   15
+                                        :line-height 22
+                                        :color       colors/white-transparent}
                   :accessibility-label :contact-address-text}
       (ethereum/normalized-address (:address contact))]]]])
 
@@ -268,7 +262,7 @@
 
 ;; TODO clean up all dependencies here, leaving these in place until all behavior is verified on
 ;; all platforms
-(defn- choose-address-contact [{:keys [modal? contacts scroll transaction network all-tokens network-status] :as opts}]
+(defn- choose-address-contact [{:keys [modal? contacts transaction network all-tokens network-status] :as opts}]
 
   (let [transaction                  (reagent/atom transaction)
         chain                        (ethereum/network->chain-keyword network)
@@ -279,29 +273,24 @@
                                       :status-bar-type (if modal? :modal-wallet :wallet)}
      [toolbar :wallet (i18n/label :t/send-to) nil]
      [simple-tab-navigator
-      {:address
-       {:name "Address"
-        :component (choose-address-view
-                    {:chain chain
-                     :transaction transaction
-                     :on-address
-                     #(re-frame/dispatch [:navigate-to :wallet-choose-amount
-                                          {:transaction (swap! transaction assoc :to %)
-                                           :native-currency native-currency
-                                           :modal? modal?}])})}
-       :contacts
-       {:name "Contacts"
-        :component
-        (partial choose-contact-view
-                 {:contacts contacts
-                  :on-contact
-                  (fn [{:keys [address] :as contact}]
-                    (re-frame/dispatch
-                     [:navigate-to :wallet-choose-amount
-                      {:modal? modal?
-                       :native-currency native-currency
-                       :contact contact
-                       :transaction (swap! transaction assoc :to address)}]))})}}
+      {:address  {:name      "Address"
+                  :component (choose-address-view
+                              {:chain       chain
+                               :transaction transaction
+                               :on-address  #(re-frame/dispatch [:navigate-to :wallet-choose-amount
+                                                                 {:transaction     (swap! transaction assoc :to %)
+                                                                  :native-currency native-currency
+                                                                  :modal?          modal?}])})}
+       :contacts {:name "Contacts"
+                  :component (partial choose-contact-view
+                                      {:contacts   contacts
+                                       :on-contact (fn [{:keys [address] :as contact}]
+                                                     (re-frame/dispatch
+                                                      [:navigate-to :wallet-choose-amount
+                                                       {:modal?          modal?
+                                                        :native-currency native-currency
+                                                        :contact         contact
+                                                        :transaction     (swap! transaction assoc :to address)}]))})}}
       :address]]))
 
 ;; ----------------------------------------------------------------------
@@ -431,28 +420,28 @@ Example:
 
 (defn- custom-gas-panel-action [{:keys [label active on-press icon background-color]} child]
   {:pre [label (boolean? active) on-press icon background-color]}
-  [react/view {:style {:flex-direction :row
+  [react/view {:style {:flex-direction     :row
                        :padding-horizontal 22
-                       :padding-vertical 11
-                       :align-items :center}}
+                       :padding-vertical   11
+                       :align-items        :center}}
    [react/touchable-highlight
     {:disabled active
      :on-press on-press}
-    [react/animated-view {:style {:border-radius 21
-                                  :width 40
-                                  :height 40
-                                  :justify-content :center
-                                  :align-items :center
+    [react/animated-view {:style {:border-radius    21
+                                  :width            40
+                                  :height           40
+                                  :justify-content  :center
+                                  :align-items      :center
                                   :background-color background-color}}
      [vector-icons/icon icon {:color (if active colors/white colors/gray)}]]]
    [react/touchable-highlight
     {:disabled active
      :on-press on-press
-     :style {:flex 1}}
-    [react/text {:style {:color colors/black
-                         :font-size 17
+     :style    {:flex 1}}
+    [react/text {:style {:color        colors/black
+                         :font-size    17
                          :padding-left 17
-                         :line-height 40}}
+                         :line-height  40}}
      label]]
    child])
 
@@ -468,7 +457,7 @@ Example:
                  gas-input
                  gas-price-input]}]
       [react/view {:style {:padding-horizontal 22
-                           :padding-vertical 11}}
+                           :padding-vertical   11}}
        [react/text "Gas price"]
        (when @gas-price-error
          [react/view {:style {:z-index 100}}
@@ -566,8 +555,8 @@ Example:
                                       gas-gas-price->fiat on-submit] :as opts}]
   {:pre [optimal-gas optimal-gas-price gas-gas-price->fiat on-submit]}
   (let [custom-open? (and custom-gas custom-gas-price)
-        state-atom   (reagent.core/atom {:custom-open? (boolean custom-open?)
-                                         :gas-input nil
+        state-atom   (reagent.core/atom {:custom-open?    (boolean custom-open?)
+                                         :gas-input       nil
                                          :gas-price-input nil})
 
         ;; slider animations
@@ -578,12 +567,12 @@ Example:
 
         optimal-button-bg-color
         (animation/interpolate slider-height
-                               {:inputRange [0 200 290]
+                               {:inputRange  [0 200 290]
                                 :outputRange [colors/blue colors/gray-light colors/gray-light]})
 
         custom-button-bg-color
         (animation/interpolate slider-height
-                               {:inputRange [0 200 290]
+                               {:inputRange  [0 200 290]
                                 :outputRange [colors/gray-light colors/blue colors/blue]})
 
         open-slider!  #(do
@@ -599,94 +588,92 @@ Example:
                     gas-input-value
                     gas-map-for-submit]}
             (custom-gas-derived-state @state-atom opts)]
-        [react/view {:style {:background-color colors/white
-                             :border-top-left-radius 8
+        [react/view {:style {:background-color        colors/white
+                             :border-top-left-radius  8
                              :border-top-right-radius 8}}
          [react/view {:style {:justify-content :center
-                              :padding-top 22
-                              :padding-bottom 7}}
+                              :padding-top     22
+                              :padding-bottom  7}}
           [react/text
            {:style {:color colors/black
-                    :font-size 22
+                    :font-size   22
                     :line-height 28
                     :font-weight :bold
-                    :text-align :center}}
+                    :text-align  :center}}
            "Network fee settings"]
           [react/text
-           {:style {:color colors/gray
-                    :font-size 15
-                    :line-height 22
-                    :text-align :center
+           {:style {:color              colors/gray
+                    :font-size          15
+                    :line-height        22
+                    :text-align         :center
                     :padding-horizontal 45
-                    :padding-vertical 8}}
+                    :padding-vertical   8}}
            "This fee, known as gas is paid directly to the Ethereum network. Status does not collect any of these funds"]]
          [react/view {:style {:border-top-width 1
                               :border-top-color colors/black-transparent
-                              :padding-top 11
-                              :padding-bottom 7}}
-          (custom-gas-panel-action
-           {:icon :icons/time
-            :label "Optimal"
-            :on-press close-slider!
-            :background-color optimal-button-bg-color
-            :active  (not (:custom-open? @state-atom))}
-           [react/text {:style {:color colors/gray
-                                :font-size 17
-                                :padding-left 17
-                                :line-height 20}}
-            optimal-fiat-price])
-          (custom-gas-panel-action
-           {:icon :icons/sliders
-            :label "Custom"
-            :on-press open-slider!
-            :background-color custom-button-bg-color
-            :active (:custom-open? @state-atom)}
-           [react/text {:style {:color colors/gray
-                                :font-size 17
-                                :padding-left 17
-                                :line-height 20
-                                :text-align :center
-                                :min-width 60}}
-            custom-fiat-price])
+                              :padding-top      11
+                              :padding-bottom   7}}
+          (custom-gas-panel-action {:icon             :icons/time
+                                    :label            "Optimal"
+                                    :on-press         close-slider!
+                                    :background-color optimal-button-bg-color
+                                    :active           (not (:custom-open? @state-atom))}
+                                   [react/text {:style {:color        colors/gray
+                                                        :font-size    17
+                                                        :padding-left 17
+                                                        :line-height  20}}
+                                    optimal-fiat-price])
+          (custom-gas-panel-action {:icon             :icons/sliders
+                                    :label            "Custom"
+                                    :on-press         open-slider!
+                                    :background-color custom-button-bg-color
+                                    :active           (:custom-open? @state-atom)}
+                                   [react/text {:style {:color        colors/gray
+                                                        :font-size    17
+                                                        :padding-left 17
+                                                        :line-height  20
+                                                        :text-align   :center
+                                                        :min-width    60}}
+                                    custom-fiat-price])
           [react/animated-view {:style {:background-color colors/white
-                                        :height slider-height
-                                        :overflow :hidden}}
+                                        :height           slider-height
+                                        :overflow         :hidden}}
            [custom-gas-edit
-            {:on-gas-price-input-change
-             #(when (money/bignumber %)
-                (swap! state-atom assoc :gas-price-input %))
-             :on-gas-input-change
-             #(when (money/bignumber %)
-                (swap! state-atom assoc :gas-input %))
-             :gas-price-input gas-price-input-value
-             :gas-input gas-input-value}]]
-          [react/view {:style {:flex-direction :row
-                               :justify-content :center
+            {:on-gas-price-input-change #(when (money/bignumber %)
+                                           (swap! state-atom assoc :gas-price-input %))
+             :on-gas-input-change       #(when (money/bignumber %)
+                                           (swap! state-atom assoc :gas-input %))
+             :gas-price-input           gas-price-input-value
+             :gas-input                 gas-input-value}]]
+          [react/view {:style {:flex-direction   :row
+                               :justify-content  :center
                                :padding-vertical 16}}
            [react/touchable-highlight
             {:on-press #(on-submit gas-map-for-submit)
-             :style {:padding-horizontal 39
-                     :padding-vertical 12
-                     :border-radius 8
-                     :background-color colors/blue-light}}
-            [react/text {:style {:font-size 15
+             :style    {:padding-horizontal 39
+                        :padding-vertical   12
+                        :border-radius      8
+                        :background-color   colors/blue-light}}
+            [react/text {:style {:font-size   15
                                  :line-height 22
-                                 :color colors/blue}}
+                                 :color       colors/blue}}
              "Update"]]]]]))))
 
 ;; Choosing the asset
 
 (defn white-toolbar [modal? title]
   (let [action (if modal? actions/close actions/back)]
-    [toolbar/toolbar {:style {:background-color colors/white
+    [toolbar/toolbar {:style {:background-color    colors/white
                               :border-bottom-width 1
                               :border-bottom-color colors/black-transparent}}
      [toolbar/nav-button (action (if modal?
                                    #(re-frame/dispatch [:wallet/discard-transaction-navigate-back])
                                    #(actions/default-handler)))]
-     [toolbar/content-title {:color colors/black :font-size 17 :font-weight :bold} title]]))
+     [toolbar/content-title {:color       colors/black
+                             :font-size   17
+                             :font-weight :bold} title]]))
 
-(defn- render-token-item [{:keys [symbol name icon decimals amount] :as coin}]
+(defn- render-token-item [{:keys [name icon decimals amount] :as coin}]
   [list/item
    [list/item-image icon]
    [list/item-content
@@ -699,37 +686,36 @@ Example:
 (defview choose-asset []
   (letsubs [assets [:wallet/transferrable-assets-with-amount]
             {:keys [on-asset]} [:get-screen-params :wallet-choose-asset]]
-    [react/keyboard-avoiding-view {:flex 1 :background-color colors/white}
+    [react/keyboard-avoiding-view {:flex             1
+                                   :background-color colors/white}
      [status-bar/status-bar {:type :modal-white}]
-     [white-toolbar false "Choose asset" #_(i18n/label :t/wallet-assets)]
+     [white-toolbar false "Choose asset"]
      [react/view {:style (assoc components.styles/flex :background-color :white)}
       [list/flat-list {:default-separator? false ;true
                        :data               assets
                        :key-fn             (comp str :symbol)
                        :render-fn          #(do
-                                              [react/touchable-highlight {:on-press
-                                                                          (fn []
-                                                                            (on-asset %))
+                                              [react/touchable-highlight {:on-press       (fn [] (on-asset %))
                                                                           :underlay-color colors/black-transparent}
                                                (render-token-item %)])}]]]))
 
 (defn show-current-asset [{:keys [name icon decimals amount] :as token}]
-  [react/view {:style {:flex-direction :row,
-                       :justify-content :center
+  [react/view {:style {:flex-direction     :row,
+                       :justify-content    :center
                        :padding-horizontal 21
-                       :padding-vertical 12}}
+                       :padding-vertical   12}}
    [list/item-image icon]
    [react/view {:margin-horizontal 9
-                :flex 1}
+                :flex              1}
     [list/item-content
      [react/text {:style {:margin-right 10,
-                          :font-weight "500"
-                          :font-size 15
-                          :color colors/white}} name]
-     [react/text {:style {:font-size 14
-                          :padding-top 4
-                          :color "rgba(255,255,255,0.4)"}
-                  :ellipsize-mode :middle
+                          :font-weight  "500"
+                          :font-size    15
+                          :color        colors/white}} name]
+     [react/text {:style           {:font-size   14
+                                    :padding-top 4
+                                    :color       colors/white-transparent}
+                  :ellipsize-mode  :middle
                   :number-of-lines 1}
       (str (wallet.utils/format-amount amount decimals)
            " "
@@ -752,12 +738,12 @@ Example:
                       (ethereum/network->chain-keyword network)
                       token-symbol)))
 
-(defn create-initial-state [{:keys [symbol decimals] :as token} amount]
-  {:input-amount (when amount
-                   (when-let [amount' (money/internal->formatted amount symbol decimals)]
-                     (str amount')))
-   :inverted false
-   :edit-gas false
+(defn create-initial-state [{:keys [symbol decimals]} amount]
+  {:input-amount  (when amount
+                    (when-let [amount' (money/internal->formatted amount symbol decimals)]
+                      (str amount')))
+   :inverted      false
+   :edit-gas      false
    :error-message nil})
 
 (defn toggle-edit-gas [state]
@@ -868,10 +854,9 @@ Example:
                      (fn [res]
                        (swap! tx-atom merge res))))
 
-(defn choose-amount-token-helper [{:keys [balance network prices fiat-currency
+(defn choose-amount-token-helper [{:keys [balance network
                                           native-currency
                                           all-tokens
-                                          modal?
                                           contact
                                           transaction]}]
   {:pre [(map? native-currency)]}
@@ -915,14 +900,14 @@ Example:
                                     (when (and gas gas-price)
                                       (swap! tx-atom assoc :gas gas :gas-price gas-price))
                                     (close-network-fees!))))]])
-              [react/touchable-highlight {:style {:background-color colors/black-transparent}
-                                          :on-press #(re-frame/dispatch
-                                                      [:navigate-to :wallet-choose-asset
-                                                       {:on-asset (fn [{:keys [symbol]}]
-                                                                    (when symbol
-                                                                      (swap! tx-atom assoc :symbol symbol)
-                                                                      (refresh-optimal-gas symbol tx-atom))
-                                                                    (re-frame/dispatch [:navigate-back]))}])
+              [react/touchable-highlight {:style          {:background-color colors/black-transparent}
+                                          :on-press       #(re-frame/dispatch
+                                                            [:navigate-to :wallet-choose-asset
+                                                             {:on-asset (fn [{:keys [symbol]}]
+                                                                          (when symbol
+                                                                            (swap! tx-atom assoc :symbol symbol)
+                                                                            (refresh-optimal-gas symbol tx-atom))
+                                                                          (re-frame/dispatch [:navigate-back]))}])
                                           :underlay-color colors/white-transparent}
                [show-current-asset coin]]
               [react/view {:flex 1}
@@ -959,22 +944,23 @@ Example:
                                      :font-weight :bold}}
                  input-symbol]]
                [react/view {}
-                [react/text {:style {:text-align :center
-                                     :margin-top 16
-                                     :font-size 15
+                [react/text {:style {:text-align  :center
+                                     :margin-top  16
+                                     :font-size   15
                                      :line-height 22
                                      :color "rgb(143,162,234)"}}
                  converted-phrase]]
-               [react/view {:justify-content :center :flex-direction :row}
+               [react/view {:justify-content :center
+                            :flex-direction  :row}
                 [react/touchable-highlight {:on-press open-network-fees!
-                                            :style {:background-color colors/black-transparent
-                                                    :padding-horizontal 13
-                                                    :padding-vertical 7
-                                                    :margin-top 1
-                                                    :border-radius 8
-                                                    :opacity (if (valid-input-amount? input-amount) 1 0)}}
-                 [react/text {:style {:color colors/white
-                                      :font-size 15
+                                            :style    {:background-color   colors/black-transparent
+                                                       :padding-horizontal 13
+                                                       :padding-vertical   7
+                                                       :margin-top         1
+                                                       :border-radius      8
+                                                       :opacity            (if (valid-input-amount? input-amount) 1 0)}}
+                 [react/text {:style {:color       colors/white
+                                      :font-size   15
                                       :line-height 22}}
 
                   (str "network fee ~ "
@@ -984,20 +970,21 @@ Example:
                        (:code fiat-currency))]]]
                [react/view {:flex 1}]
 
-               [react/view {:flex-direction :row :padding 3}
-                [address-button {:underlay-color colors/white-transparent
+               [react/view {:flex-direction :row
+                            :padding        3}
+                [address-button {:underlay-color   colors/white-transparent
                                  :background-color colors/black-transparent
-                                 :on-press #(swap! state-atom update :inverted not)}
+                                 :on-press         #(swap! state-atom update :inverted not)}
                  [react/view {:flex-direction :row}
                   [react/text {:style {:color colors/white
-                                       :font-size 15
-                                       :line-height 22
+                                       :font-size     15
+                                       :line-height   22
                                        :padding-right 10}}
                    (:code fiat-currency)]
                   [vector-icons/icon :icons/change {:color colors/white-transparent}]
-                  [react/text {:style {:color colors/white
-                                       :font-size 15
-                                       :line-height 22
+                  [react/text {:style {:color        colors/white
+                                       :font-size    15
+                                       :line-height  22
                                        :padding-left 11}}
                    (wallet.utils/display-symbol coin)]]]
                 (let [disabled? (string/blank? input-amount)]
@@ -1013,17 +1000,17 @@ Example:
                                                                                                         (money/bignumber input-amount)
                                                                                                         (:symbol coin)
                                                                                                         (:decimals coin)))}])}
-                   [react/text {:style {:color (if disabled? colors/white colors/blue)
-                                        :font-size 15
+                   [react/text {:style {:color       (if disabled? colors/white colors/blue)
+                                        :font-size   15
                                         :line-height 22}}
                     (i18n/label :t/next)]])]]]))]))))
 
 (defview choose-amount-token []
   (letsubs [{:keys [transaction modal? contact native-currency]} [:get-screen-params :wallet-choose-amount]
-            balance [:balance]
-            prices  [:prices]
-            network [:account/network]
-            all-tokens [:wallet/all-tokens]
+            balance       [:balance]
+            prices        [:prices]
+            network       [:account/network]
+            all-tokens    [:wallet/all-tokens]
             fiat-currency [:wallet/currency]]
     [choose-amount-token-helper {:balance         balance
                                  :network         network
@@ -1107,8 +1094,8 @@ Example:
    word])
 
 (defn- phrase-separator []
-  [react/view {:style {:height "100%"
-                       :width 1
+  [react/view {:style {:height           "100%"
+                       :width            1
                        :background-color colors/gray-light}}])
 
 (defview sign-modal [account {:keys [transaction contact total-amount gas-amount native-currency fiat-currency
@@ -1211,7 +1198,7 @@ Example:
       [sign-modal account params])))
 
 (defn transaction-overview [{:keys [flow transaction contact token native-currency
-                                    fiat-currency prices all-tokens chain] :as data}]
+                                    fiat-currency prices all-tokens chain]}]
   (let [tx-atom                (reagent/atom transaction)
         network-fees-modal-ref (atom nil)
         open-network-fees!     #(anim-ref-send @network-fees-modal-ref :open!)
@@ -1253,11 +1240,11 @@ Example:
         [wallet.components/simple-screen {:avoid-keyboard? (not modal?)
                                           :status-bar-type (if modal? :modal-wallet :wallet)}
          [toolbar flow "Send amount" (:public-key contact)]
-         [react/view {:style {:flex 1
+         [react/view {:style {:flex             1
                               :border-top-width 1
                               :border-top-color colors/white-light-transparent}}
           (when (optimal-gas-present? @tx-atom)
-            [slide-up-modal {:anim-ref #(reset! network-fees-modal-ref %)
+            [slide-up-modal {:anim-ref       #(reset! network-fees-modal-ref %)
                              :swipe-dismiss? true}
              [custom-gas-input-panel
               (-> (select-keys @tx-atom [:gas :gas-price :optimal-gas :optimal-gas-price])
@@ -1270,74 +1257,74 @@ Example:
                                 (close-network-fees!))))]])
           [react/text {:style {:margin-top 18
                                :text-align :center
-                               :font-size 15
-                               :color colors/white-transparent}}
+                               :font-size  15
+                               :color      colors/white-transparent}}
            "Recipient"]
           [react/view
            (when contact
-             [react/view {:style {:margin-top 10
-                                  :flex-direction :row
+             [react/view {:style {:margin-top      10
+                                  :flex-direction  :row
                                   :justify-content :center}}
               [photos/photo (:photo-path contact) {:size list.styles/image-size}]])
-           [react/text {:style {:color colors/white
+           [react/text {:style {:color             colors/white
                                 :margin-horizontal 24
-                                :margin-top 10
-                                :line-height 22
-                                :font-size 15
-                                :text-align :center}}
+                                :margin-top        10
+                                :line-height       22
+                                :font-size         15
+                                :text-align        :center}}
             (ethereum/normalized-address (:to transaction))]]
           [react/text {:style {:margin-top 18
-                               :font-size 15
+                               :font-size  15
                                :text-align :center
-                               :color colors/white-transparent}}
+                               :color      colors/white-transparent}}
            "Amount"]
-          [react/view {:style {:flex-direction :row
-                               :align-items :center
-                               :margin-top 10
+          [react/view {:style {:flex-direction    :row
+                               :align-items       :center
+                               :margin-top        10
                                :margin-horizontal 24}}
-           [react/text {:style {:color colors/white
+           [react/text {:style {:color     colors/white
                                 :font-size 15}} "Sending"]
            [react/view {:style {:flex 1}}
-            [react/text {:style {:color colors/white
+            [react/text {:style {:color       colors/white
                                  :line-height 21
-                                 :font-size 15
+                                 :font-size   15
                                  :font-weight "500"
-                                 :text-align :right}}
+                                 :text-align  :right}}
              amount-str]
-            [react/text {:style {:color colors/white-transparent
+            [react/text {:style {:color       colors/white-transparent
                                  :line-height 21
-                                 :font-size 15
-                                 :text-align :right}}
+                                 :font-size   15
+                                 :text-align  :right}}
              (str "~ " (:symbol fiat-currency "$")  fiat-amount " " (:code fiat-currency))]]]
           [react/view {:style {:margin-horizontal 24
-                               :margin-top 10
-                               :padding-top 10
-                               :border-top-width 1
-                               :border-top-color colors/white-light-transparent}}
+                               :margin-top        10
+                               :padding-top       10
+                               :border-top-width  1
+                               :border-top-color  colors/white-light-transparent}}
            [react/view {:style {:flex-direction :row
-                                :align-items :center}}
+                                :align-items    :center}}
             [react/touchable-highlight {:on-press #(open-network-fees!)
-                                        :style {:background-color colors/black-transparent
-                                                :padding-horizontal 16
-                                                :padding-vertical 9
-                                                :border-radius 8}}
+                                        :style    {:background-color   colors/black-transparent
+                                                   :padding-horizontal 16
+                                                   :padding-vertical   9
+                                                   :border-radius      8}}
              [react/view {:style {:flex-direction :row
-                                  :align-items :center}}
-              [react/text {:style {:color colors/white
+                                  :align-items    :center}}
+              [react/text {:style {:color         colors/white
                                    :padding-right 10
-                                   :font-size 15}} "Network fee"]
+                                   :font-size     15}} "Network fee"]
               [vector-icons/icon :icons/settings {:color colors/white}]]]
             [react/view {:style {:flex 1}}
-             [react/text {:style {:color colors/white
+             [react/text {:style {:color       colors/white
                                   :line-height 21
-                                  :font-size 15
+                                  :font-size   15
                                   :font-weight "500"
-                                  :text-align :right}}
+                                  :text-align  :right}}
               (str network-fee-eth " " (wallet.utils/display-symbol native-currency))]
-             [react/text {:style {:color colors/white-transparent
+             [react/text {:style {:color       colors/white-transparent
                                   :line-height 21
-                                  :font-size 15
-                                  :text-align :right}}
+                                  :font-size   15
+                                  :text-align  :right}}
               (str "~ "  network-fee-fiat " " (:code fiat-currency))]]]]
           [static-modal
            [confirm-and-sign {:transaction     transaction
