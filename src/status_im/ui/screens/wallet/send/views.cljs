@@ -116,7 +116,7 @@
                       value
                       #(if (ethereum/address? %)
                          (swap! transaction assoc :to-ens value :to %)
-                         (reset! error-message "Unknown ENS name"))))
+                         (reset! error-message (i18n/label :t/error-unknown-ens-name)))))
     (do (swap! transaction assoc :to value)
         (reset! error-message nil))))
 
@@ -140,7 +140,7 @@
             :auto-focus             true
             :auto-capitalize        :none
             :auto-correct           false
-            :placeholder            "0x... or name.eth"
+            :placeholder            (i18n/label :t/address-or-ens-placeholder)
             :placeholder-text-color colors/blue-shadow
             :multiline              true
             :max-length             84
@@ -264,7 +264,7 @@
                                       :status-bar-type (if modal? :modal-wallet :wallet)}
      [toolbar :wallet (i18n/label :t/send-to) nil]
      [simple-tab-navigator
-      {:address  {:name      "Address"
+      {:address  {:name      (i18n/label :t/wallet-address-tab-title)
                   :component (choose-address-view
                               {:chain       chain
                                :transaction transaction
@@ -272,7 +272,7 @@
                                                                  {:transaction     (swap! transaction assoc :to %)
                                                                   :native-currency native-currency
                                                                   :modal?          modal?}])})}
-       :contacts {:name "Contacts"
+       :contacts {:name      (i18n/label :t/wallet-contacts-tab-title)
                   :component (partial choose-contact-view
                                       {:contacts   contacts
                                        :on-contact (fn [{:keys [address] :as contact}]
@@ -444,7 +444,7 @@
                  gas-price-input]}]
       [react/view {:style {:padding-horizontal 22
                            :padding-vertical   11}}
-       [react/text "Gas price"]
+       [react/text (i18n/label :t/gas-price)]
        (when @gas-price-error
          [react/view {:style {:z-index 100}}
           [tooltip/tooltip @gas-price-error
@@ -462,17 +462,17 @@
                            :placeholder    "0"
                            :on-change-text (fn [x]
                                              (if-not (money/bignumber x)
-                                               (reset! gas-price-error "Invalid number format")
+                                               (reset! gas-price-error (i18n/label :t/invalid-number-format))
                                                (reset! gas-price-error nil))
                                              (on-gas-price-input-change x))
                            :default-value  gas-price-input
                            :style          {:font-size 15
                                             :flex      1}}]
-        [react/text "Gwei"]]
+        [react/text (i18n/label :t/gwei)]]
        [react/text {:style {:color colors/gray
                             :font-size 12}}
-        "Gas price is the amount you are willing to pay per unit of gas. Increasing this price may help your transaction get processed faster."]
-       [react/text {:style {:margin-top 22}} "Gas limit"]
+        (i18n/label :t/gas-cost-explanation)]
+       [react/text {:style {:margin-top 22}} (i18n/label :t/gas-limit)]
        (when @gas-error
          [react/view {:style {:z-index 100}}
           [tooltip/tooltip @gas-error
@@ -490,7 +490,7 @@
                            :placeholder    "0"
                            :on-change-text (fn [x]
                                              (if-not (money/bignumber x)
-                                               (reset! gas-error "Invalid number format")
+                                               (reset! gas-error (i18n/label :t/invalid-number-format))
                                                (reset! gas-error nil))
                                              (on-gas-input-change x))
                            :default-value  gas-input
@@ -498,7 +498,7 @@
                                             :flex      1}}]]
        [react/text {:style {:color     colors/gray
                             :font-size 12}}
-        "Gas limit is the maximum units of gas you're willing to spend on this transaction."]])))
+        (i18n/label :t/gas-limit-explanation)]])))
 
 (defn custom-gas-derived-state [{:keys [gas-input gas-price-input custom-open?]}
                                 {:keys [custom-gas custom-gas-price
@@ -586,7 +586,7 @@
                     :line-height 28
                     :font-weight :bold
                     :text-align  :center}}
-           "Network fee settings"]
+           (i18n/label :t/network-fee-settings)]
           [react/text
            {:style {:color              colors/gray
                     :font-size          15
@@ -594,13 +594,13 @@
                     :text-align         :center
                     :padding-horizontal 45
                     :padding-vertical   8}}
-           "This fee, known as gas is paid directly to the Ethereum network. Status does not collect any of these funds"]]
+           (i18n/label :t/network-fee-explanation)]]
          [react/view {:style {:border-top-width 1
                               :border-top-color colors/black-transparent
                               :padding-top      11
                               :padding-bottom   7}}
           (custom-gas-panel-action {:icon             :icons/time
-                                    :label            "Optimal"
+                                    :label            (i18n/label :t/optimal-gas-option)
                                     :on-press         close-slider!
                                     :background-color optimal-button-bg-color
                                     :active           (not (:custom-open? @state-atom))}
@@ -610,7 +610,7 @@
                                                         :line-height  20}}
                                     optimal-fiat-price])
           (custom-gas-panel-action {:icon             :icons/sliders
-                                    :label            "Custom"
+                                    :label            (i18n/label :t/custom-gas-option)
                                     :on-press         open-slider!
                                     :background-color custom-button-bg-color
                                     :active           (:custom-open? @state-atom)}
@@ -643,7 +643,7 @@
             [react/text {:style {:font-size   15
                                  :line-height 22
                                  :color       colors/blue}}
-             "Update"]]]]]))))
+             (i18n/label :t/update)]]]]]))))
 
 ;; Choosing the asset
 
@@ -674,7 +674,7 @@
     [react/keyboard-avoiding-view {:flex             1
                                    :background-color colors/white}
      [status-bar/status-bar {:type :modal-white}]
-     [white-toolbar false "Choose asset"]
+     [white-toolbar false (i18n/label :t/choose-asset)]
      [react/view {:style (assoc components.styles/flex :background-color :white)}
       [list/flat-list {:default-separator? false ;true
                        :data               assets
@@ -794,7 +794,7 @@
                error error
                (not (money/sufficient-funds? (current-token-input-amount state token fiat-currency prices)
                                              (:amount token)))
-               "Insufficient funds"
+               (i18n/label :t/wallet-insufficient-funds)
                :else nil)]
       (assoc state :error-message error-msg)
       state)))
@@ -861,9 +861,9 @@
               (network-fees prices coin fiat-currency (max-fee gas-map)))]
         [wallet.components/simple-screen {:avoid-keyboard? (not modal?)
                                           :status-bar-type (if modal? :modal-wallet :wallet)}
-         [toolbar :wallet "Send amount" nil]
+         [toolbar :wallet (i18n/label :t/send-amount) nil]
          (if (empty? balance)
-           (info-page "You don't have any assets yet")
+           (info-page (i18n/label :t/wallet-no-assets-enabled))
            (let [{:keys [error-message input-amount] :as state} @state-atom
                  input-symbol     (input-currency-symbol state coin fiat-currency)
                  converted-phrase (converted-currency-phrase state coin fiat-currency prices)]
@@ -943,12 +943,9 @@
                  [react/text {:style {:color       colors/white
                                       :font-size   15
                                       :line-height 22}}
-
-                  (str "network fee ~ "
-                       (when (optimal-gas-present? @tx-atom)
-                         (gas-gas-price->fiat (current-gas @tx-atom)))
-                       " "
-                       (:code fiat-currency))]]]
+                  (i18n/label :t/network-fee-amount {:amount   (when (optimal-gas-present? @tx-atom)
+                                                                 (gas-gas-price->fiat (current-gas @tx-atom)))
+                                                     :currency (:code fiat-currency)})]]]
                [react/view {:flex 1}]
 
                [react/view {:flex-direction :row
@@ -1027,7 +1024,7 @@
                         :line-height 22
                         :margin-top  23
                         :text-align  :center}}
-    "Total"]
+    (i18n/label :t/total)]
    [react/text {:style {:color       colors/black
                         :margin-top  4
                         :font-weight :bold
@@ -1042,7 +1039,8 @@
                           :font-size   22
                           :line-height 28
                           :text-align  :center}}
-      (str "Send" " " gas-amount " " (name (:symbol native-currency)))])
+      (i18n/label :t/send-amount-currency {:amount   gas-amount
+                                           :currency (name (:symbol native-currency))})])
    [react/text {:style {:color       colors/gray
                         :text-align  :center
                         :margin-top  3
@@ -1062,7 +1060,7 @@
      [react/text {:style {:font-size   15
                           :line-height 22
                           :color       colors/blue}}
-      "Confirm"]]]])
+      (i18n/label :t/confirm)]]]])
 
 (defn- phrase-word [word]
   [react/text {:style {:color       colors/blue
@@ -1087,7 +1085,7 @@
                            :left     0
                            :right    0
                            :bottom   0}}
-       [tooltip/tooltip "Only send the transaction if you recognize\nyour three words"
+       [tooltip/tooltip (i18n/label :t/wallet-passphrase-reminder)
         {:bottom-value 12
          :color        colors/blue
          :text-color   colors/white}]
@@ -1114,7 +1112,8 @@
                              :font-size   22
                              :line-height 28
                              :text-align  :center}}
-         (str "Send" " " total-amount " " (name (:symbol transaction)))]
+         (i18n/label :t/send-amount-currency {:amount   total-amount
+                                              :currency (name (:symbol transaction))})]
         (when-not (= :ETH (:symbol transaction))
           [react/text {:style {:color       colors/black
                                :margin-top  13
@@ -1122,7 +1121,8 @@
                                :font-size   22
                                :line-height 28
                                :text-align  :center}}
-           (str "Send" " " gas-amount " " (name (:symbol native-currency)))])
+           (i18n/label :t/send-amount-currency {:amount   gas-amount
+                                                :currency (name (:symbol native-currency))})])
         [react/text {:style {:color       colors/gray
                              :text-align  :center
                              :margin-top  3
@@ -1132,7 +1132,7 @@
         [react/text-input
          {:auto-focus             true
           :secure-text-entry      true
-          :placeholder            "Enter your login password..."
+          :placeholder            (i18n/label :t/enter-your-login-password)
           :placeholder-text-color colors/gray
           :on-change-text         #(reset! password %)
           :style                  {:flex              1
@@ -1168,7 +1168,7 @@
           [react/text {:style {:font-size   15
                                :line-height 22
                                :color       colors/blue}}
-           "Send"]]]]])))
+           (i18n/label :t/send)]]]]])))
 
 (defview confirm-and-sign [params]
   (letsubs [signing? (reagent/atom false)
@@ -1219,7 +1219,7 @@
                                (money/with-precision 2))]
         [wallet.components/simple-screen {:avoid-keyboard? (not modal?)
                                           :status-bar-type (if modal? :modal-wallet :wallet)}
-         [toolbar flow "Send amount" (:public-key contact)]
+         [toolbar flow (i18n/label :t/send-amount) (:public-key contact)]
          [react/view {:style {:flex             1
                               :border-top-width 1
                               :border-top-color colors/white-light-transparent}}
@@ -1239,7 +1239,7 @@
                                :text-align :center
                                :font-size  15
                                :color      colors/white-transparent}}
-           "Recipient"]
+           (i18n/label :t/recipient)]
           [react/view
            (when contact
              [react/view {:style {:margin-top      10
@@ -1257,13 +1257,13 @@
                                :font-size  15
                                :text-align :center
                                :color      colors/white-transparent}}
-           "Amount"]
+           (i81n/label :t/amount)]
           [react/view {:style {:flex-direction    :row
                                :align-items       :center
                                :margin-top        10
                                :margin-horizontal 24}}
            [react/text {:style {:color     colors/white
-                                :font-size 15}} "Sending"]
+                                :font-size 15}} (i18n/label :t/sending)]
            [react/view {:style {:flex 1}}
             [react/text {:style {:color       colors/white
                                  :line-height 21
@@ -1292,7 +1292,7 @@
                                   :align-items    :center}}
               [react/text {:style {:color         colors/white
                                    :padding-right 10
-                                   :font-size     15}} "Network fee"]
+                                   :font-size     15}} (i18n/label :t/network-fee)]
               [vector-icons/icon :icons/settings {:color colors/white}]]]
             [react/view {:style {:flex 1}}
              [react/text {:style {:color       colors/white
