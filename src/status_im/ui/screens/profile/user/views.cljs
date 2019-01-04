@@ -170,7 +170,7 @@
     {:label-kw            :t/log-level
      :action-fn           #(re-frame/dispatch [:navigate-to :log-level-settings])
      :accessibility-label :log-level-settings-button}]
-   (when dev-mode?
+   (when (and dev-mode? (not platform/ios?))
      [react/view styles/my-profile-settings-send-logs-wrapper
       [react/view styles/my-profile-settings-send-logs
        [profile.components/settings-item {:label-kw            :t/send-logs

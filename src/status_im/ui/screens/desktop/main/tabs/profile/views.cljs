@@ -144,11 +144,10 @@
       [react/switch {:on-tint-color   colors/blue
                      :value           logging-enabled
                      :on-value-change #(re-frame/dispatch [:log-level.ui/logging-enabled (not logging-enabled)])}]]
-     (when-not platform/ios?
-       [react/view {:style (styles/adv-settings-row false)}
-        [react/touchable-highlight {:on-press #(re-frame/dispatch [:logging.ui/send-logs-pressed])}
-         [react/text {:style (styles/adv-settings-row-text colors/red)}
-          (i18n/label :t/send-logs)]]])]))
+     [react/view {:style (styles/adv-settings-row false)}
+      [react/touchable-highlight {:on-press #(re-frame/dispatch [:logging.ui/send-logs-pressed])}
+       [react/text {:style (styles/adv-settings-row-text colors/red)}
+        (i18n/label :t/send-logs)]]]]))
 
 (views/defview advanced-settings []
   (views/letsubs [installations         [:pairing/installations]
