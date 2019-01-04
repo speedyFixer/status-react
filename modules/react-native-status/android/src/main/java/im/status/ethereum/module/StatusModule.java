@@ -574,7 +574,7 @@ class StatusModule extends ReactContextBaseJavaModule implements LifecycleEventL
         final File gethLogFile = getLogsFile();
 
         try {
-            final long usableSpace = gethLogFile.getUsableSpace();
+            final long usableSpace = zipFile.getUsableSpace();
             if (usableSpace < 20 * 1024 * 1024) {
                 final String message = String.format("Insufficient space available on device (%s) to write logs.\nPlease free up some space.", android.text.format.Formatter.formatShortFileSize(context, usableSpace));
                 Log.e(TAG, message);
