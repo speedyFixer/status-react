@@ -32,6 +32,7 @@
        :editable               (not cooldown-enabled?)
        :blur-on-submit         false
        :on-focus               #(re-frame/dispatch [:chat.ui/set-chat-ui-props {:input-focused?    true
+                                                                                :show-stickers?    false
                                                                                 :messages-focused? false}])
        :on-blur                #(re-frame/dispatch [:chat.ui/set-chat-ui-props {:input-focused? false}])
        :on-submit-editing      #(when single-line-input?
@@ -130,7 +131,8 @@
 (defview input-container []
   (letsubs [margin               [:chats/input-margin]
             {:keys [input-text]} [:chats/current-chat]
-            result-box           [:chats/current-chat-ui-prop :result-box]]
+            result-box           [:chats/current-chat-ui-prop :result-box]
+            show-stickers?       [:chats/current-chat-ui-prop :show-stickers?]]
     (let [single-line-input? (:singleLineInput result-box)]
       [react/view {:style     (style/root margin)
                    :on-layout #(let [h (-> (.-nativeEvent %)
@@ -141,6 +143,13 @@
        [reply-message-view]
        [react/view {:style style/input-container}
         [input-view {:single-line-input? single-line-input?}]
+        (when (string/blank? input-text)
+          [react/touchable-highlight
+           {:on-press            (fn [_]
+                                   (re-frame/dispatch [:chat.ui/set-chat-ui-props {:show-stickers? (not show-stickers?)}])
+                                   (react/dismiss-keyboard!))}
+           [vector-icons/icon :icons/stickers {:container-style {:margin 14 :margin-right 6}
+                                               :color (if show-stickers? colors/blue colors/gray)}]])
         (if (string/blank? input-text)
           [commands-button]
           [send-button/send-button-view])]])))

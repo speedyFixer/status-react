@@ -23,7 +23,8 @@
             [status-im.ui.components.animation :as animation]
             [status-im.ui.components.icons.vector-icons :as vector-icons]
             [status-im.ui.components.colors :as colors]
-            [status-im.ui.components.toolbar.actions :as toolbar.actions]))
+            [status-im.ui.components.toolbar.actions :as toolbar.actions]
+            [status-im.ui.screens.chat.stickers :as stickers]))
 
 (defview add-contact-bar [contact-identity]
   (letsubs [{:keys [hide-contact?] :as contact} [:contacts/contact-by-identity]]
@@ -147,6 +148,7 @@
   (letsubs [{:keys [group-chat public?]} [:chats/current-chat]
             show-bottom-info?            [:chats/current-chat-ui-prop :show-bottom-info?]
             show-message-options?        [:chats/current-chat-ui-prop :show-message-options?]
+            show-stickers?               [:chats/current-chat-ui-prop :show-stickers?]
             current-view                 [:get :view-id]]
     ;; this scroll-view is a hack that allows us to use on-blur and on-focus on Android
     ;; more details here: https://github.com/facebook/react-native/issues/11071
@@ -163,6 +165,8 @@
          [messages-view-wrapper group-chat modal?]]
         [react/view style/message-view-preview])
       [input/container]
+      (when show-stickers?
+        [stickers/stickers-view])
       (when show-bottom-info?
         [bottom-info/bottom-info-view])
       (when show-message-options?
