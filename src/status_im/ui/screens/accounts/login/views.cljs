@@ -82,14 +82,20 @@
                                 (re-frame/dispatch [:set-in [:accounts/login :error] ""]))
           :secure-text-entry true
           :error             (when (not-empty error) (i18n/label (error-key error)))}]]
+
        [react/view {:style styles/save-password-checkbox-container}
-        [profile.components/settings-switch-item
-         {:label-kw  (if can-save-password?
-                       :t/save-password
-                       :t/save-password-unavailable)
-          :active?   can-save-password?
-          :value     save-password?
-          :action-fn #(re-frame/dispatch [:set-in [:accounts/login :save-password?] %])}]]]]
+        (if (and platform/android? (not can-save-password?))
+          ;; on Android, there is much more reasons for the password save to be unavailable,
+          ;; so we don't show the checkbox whatsoever but put a label explaining why it happenned.
+          [react/i18n-text {:style styles/save-password-unavailable-android
+                            :key :save-password-unavailable-android}]
+          [profile.components/settings-switch-item
+           {:label-kw  (if can-save-password?
+                         :t/save-password
+                         :t/save-password-unavailable)
+            :active?   can-save-password?
+            :value     save-password?
+            :action-fn #(re-frame/dispatch [:set-in [:accounts/login :save-password?] %])}])]]]
      (when processing
        [react/view styles/processing-view
         [components/activity-indicator {:animating true}]
